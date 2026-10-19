@@ -1,0 +1,181 @@
+{
+  "total_revenue": {
+    "nom": "Total Revenue",
+    "valeur": 1265793.04,
+    "unite": "valeur",
+    "definition": "Chiffre d'affaires total",
+    "formule": "Somme des montants",
+    "bo": "BO3",
+    "pourquoi": "Mesure de base de la performance commerciale (BO3).",
+    "colonnes_sources": [
+      "lineTotal"
+    ],
+    "lignes_utilisees": 2155
+  },
+  "order_count": {
+    "nom": "Order Count",
+    "valeur": 830,
+    "unite": "commandes",
+    "definition": "Nombre de commandes distinctes",
+    "formule": "Nombre de commandes différentes",
+    "bo": "BO3",
+    "pourquoi": "Mesure le volume d'activité (BO3).",
+    "colonnes_sources": [
+      "orderID"
+    ],
+    "lignes_utilisees": 2155
+  },
+  "avg_order_value": {
+    "nom": "Average Order Value",
+    "valeur": 1525.05,
+    "unite": "valeur",
+    "definition": "Panier moyen par commande",
+    "formule": "Chiffre d'affaires / nombre de commandes",
+    "bo": "BO3",
+    "pourquoi": "Montre la valeur moyenne d'une vente (BO3).",
+    "colonnes_sources": [
+      "lineTotal",
+      "orderID"
+    ],
+    "lignes_utilisees": 2155
+  },
+  "yoy_growth": {
+    "nom": "YoY Growth",
+    "valeur": {
+      "ca_par_annee": {
+        "2013": 208083.97,
+        "2014": 617085.2,
+        "2015": 440623.87
+      },
+      "croissance_pct": {
+        "2014": 61.29,
+        "2015": 79.77
+      },
+      "mois_couverts": {
+        "2013": 6,
+        "2014": 12,
+        "2015": 5
+      }
+    },
+    "unite": "%",
+    "definition": "Croissance annuelle du CA (mêmes mois)",
+    "formule": "(CA année N - CA année N-1) / CA année N-1, sur les mêmes mois",
+    "bo": "BO3",
+    "pourquoi": "KPI cité dans le rapport : montre l'évolution de la performance dans le temps (BO3).",
+    "colonnes_sources": [
+      "lineTotal",
+      "orderDate"
+    ],
+    "lignes_utilisees": 2155
+  },
+  "top_countries": {
+    "nom": "Top Countries",
+    "valeur": [
+      {
+        "nom": "USA",
+        "valeur": 245584.61,
+        "part_pct": 19.4
+      },
+      {
+        "nom": "Germany",
+        "valeur": 230284.63,
+        "part_pct": 18.19
+      },
+      {
+        "nom": "Austria",
+        "valeur": 128003.84,
+        "part_pct": 10.11
+      },
+      {
+        "nom": "Brazil",
+        "valeur": 106925.78,
+        "part_pct": 8.45
+      },
+      {
+        "nom": "France",
+        "valeur": 81358.32,
+        "part_pct": 6.43
+      }
+    ],
+    "unite": "valeur / %",
+    "definition": "5 premiers pays et leur part du CA",
+    "formule": "Somme par pays, du plus grand au plus petit",
+    "bo": "BO3",
+    "pourquoi": "Besoin de Leila (KPI pays fiables) : révèle les marchés clés et la dépendance géographique (BO3).",
+    "colonnes_sources": [
+      "lineTotal",
+      "country"
+    ],
+    "lignes_utilisees": 2155
+  },
+  "top_products": {
+    "nom": "Top Products",
+    "valeur": [
+      {
+        "nom": "Côte de Blaye",
+        "valeur": 141396.73,
+        "part_pct": 11.17
+      },
+      {
+        "nom": "Thüringer Rostbratwurst",
+        "valeur": 80368.67,
+        "part_pct": 6.35
+      },
+      {
+        "nom": "Raclette Courdavault",
+        "valeur": 71155.7,
+        "part_pct": 5.62
+      },
+      {
+        "nom": "Tarte au sucre",
+        "valeur": 47234.97,
+        "part_pct": 3.73
+      },
+      {
+        "nom": "Camembert Pierrot",
+        "valeur": 46825.48,
+        "part_pct": 3.7
+      }
+    ],
+    "unite": "valeur / %",
+    "definition": "5 premiers produits et leur part du CA",
+    "formule": "Somme par produit, du plus grand au plus petit",
+    "bo": "BO3",
+    "pourquoi": "Besoin de Leila (KPI produits fiables) : révèle les produits qui font le chiffre d'affaires (BO3).",
+    "colonnes_sources": [
+      "lineTotal",
+      "productName"
+    ],
+    "lignes_utilisees": 2155
+  },
+  "avg_lead_time": {
+    "nom": "Average Shipping Lead Time",
+    "valeur": 8.49,
+    "unite": "jours",
+    "definition": "Délai moyen entre commande et expédition",
+    "formule": "Moyenne (date d'expédition - date de commande)",
+    "bo": "BO3",
+    "pourquoi": "Performance logistique (BO3) : rapidité de traitement des commandes.",
+    "colonnes_sources": [
+      "orderDate",
+      "shippedDate",
+      "orderID"
+    ],
+    "lignes_utilisees": 2155
+  },
+  "on_time_rate": {
+    "nom": "On-Time Shipping Rate",
+    "valeur": 95.43,
+    "unite": "%",
+    "definition": "Part des commandes expédiées à temps",
+    "formule": "Commandes expédiées avant la date exigée / commandes expédiées",
+    "bo": "BO3",
+    "pourquoi": "Performance logistique (BO3) : respect de la date de livraison exigée.",
+    "colonnes_sources": [
+      "shippedDate",
+      "requiredDate",
+      "orderID"
+    ],
+    "lignes_utilisees": 2155
+  }
+}

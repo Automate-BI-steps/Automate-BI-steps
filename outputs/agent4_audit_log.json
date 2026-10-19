@@ -1,0 +1,116 @@
+[
+  {
+    "etape": "charger_donnees",
+    "message": "2155 lignes, 15 colonnes (jointure des 7 tables)",
+    "heure": "2026-10-19T18:01:24",
+    "methode": "jointure des 7 tables",
+    "tables": {
+      "categories": 8,
+      "customers": 91,
+      "employees": 9,
+      "order_details": 2155,
+      "orders": 830,
+      "products": 77,
+      "shippers": 3
+    },
+    "origine": {
+      "orderID": "order_details",
+      "unitPrice": "order_details",
+      "quantity": "order_details",
+      "discount": "order_details",
+      "lineTotal": "calculé : unitPrice × quantity × (1 − discount)",
+      "orderDate": "orders",
+      "requiredDate": "orders",
+      "shippedDate": "orders",
+      "freight": "orders",
+      "companyName": "customers",
+      "country": "customers",
+      "employeeName": "employees",
+      "shipperName": "shippers",
+      "productName": "products",
+      "categoryName": "categories"
+    }
+  },
+  {
+    "etape": "comprendre_colonnes",
+    "message": "Colonnes -> rôles (mots-clés)",
+    "heure": "2026-10-19T18:01:24",
+    "mapping": {
+      "order_id": "orderID",
+      "shipped_date": "shippedDate",
+      "required_date": "requiredDate",
+      "date": "orderDate",
+      "country": "country",
+      "product": "productName",
+      "value": "lineTotal"
+    },
+    "sources": {
+      "order_id": "mots-clés",
+      "shipped_date": "mots-clés",
+      "required_date": "mots-clés",
+      "date": "mots-clés",
+      "country": "mots-clés",
+      "product": "mots-clés",
+      "value": "mots-clés"
+    }
+  },
+  {
+    "etape": "calculer_kpi",
+    "message": "8/12 KPI calculés",
+    "heure": "2026-10-19T18:01:24",
+    "calcules": [
+      "total_revenue",
+      "order_count",
+      "avg_order_value",
+      "yoy_growth",
+      "top_countries",
+      "top_products",
+      "avg_lead_time",
+      "on_time_rate"
+    ],
+    "ignores": {
+      "total_exports": "rôles manquants : ['flow']",
+      "total_imports": "rôles manquants : ['flow']",
+      "trade_balance": "rôles manquants : ['flow']",
+      "coverage_ratio": "rôles manquants : ['flow']"
+    }
+  },
+  {
+    "etape": "documenter_kpi",
+    "message": "8 KPI documentés (formule, colonnes, DAX)",
+    "heure": "2026-10-19T18:01:24"
+  },
+  {
+    "etape": "controler",
+    "message": "Tous les contrôles sont OK",
+    "heure": "2026-10-19T18:01:24",
+    "controles": [
+      {
+        "controle": "montants négatifs",
+        "detail": "0",
+        "statut": "ok"
+      },
+      {
+        "controle": "montants vides ou non numériques",
+        "detail": "0.0%",
+        "statut": "ok"
+      },
+      {
+        "controle": "CA = somme des lignes",
+        "detail": "écart 0.00",
+        "statut": "ok"
+      },
+      {
+        "controle": "parts des pays <= 100 %",
+        "detail": "62.6%",
+        "statut": "ok"
+      },
+      {
+        "controle": "expédition avant la commande",
+        "detail": "0",
+        "statut": "ok"
+      }
+    ],
+    "raisons": []
+  }
+]

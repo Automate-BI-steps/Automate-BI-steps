@@ -1,0 +1,5 @@
+langgraph>=0.2.57
+pandas>=2
+numpy
+pytest
+# Optionnel (mapping par LLM) : pip install langchain-ollama pydantic

@@ -1,0 +1,23 @@
+Total Revenue =
+SUM(Fact_Trade[lineTotal])
+
+Order Count =
+DISTINCTCOUNT(Fact_Trade[orderID])
+
+Average Order Value =
+DIVIDE([Total Revenue], [Order Count])
+
+YoY Growth =
+VAR cur = SUM(Fact_Trade[lineTotal]) VAR prev = CALCULATE(SUM(Fact_Trade[lineTotal]), SAMEPERIODLASTYEAR(Dim_Date[Date])) RETURN DIVIDE(cur - prev, prev)
+
+Top Countries =
+DIVIDE(SUM(Fact_Trade[lineTotal]), CALCULATE(SUM(Fact_Trade[lineTotal]), ALL(Fact_Trade[country])))
+
+Top Products =
+DIVIDE(SUM(Fact_Trade[lineTotal]), CALCULATE(SUM(Fact_Trade[lineTotal]), ALL(Fact_Trade[productName])))
+
+Average Shipping Lead Time =
+AVERAGEX(VALUES(Fact_Trade[orderID]), DATEDIFF(CALCULATE(MIN(Fact_Trade[orderDate])), CALCULATE(MAX(Fact_Trade[shippedDate])), DAY))
+
+On-Time Shipping Rate =
+VAR expediees = FILTER(VALUES(Fact_Trade[orderID]), NOT ISBLANK(CALCULATE(MAX(Fact_Trade[shippedDate])))) RETURN DIVIDE(COUNTROWS(FILTER(expediees, CALCULATE(MAX(Fact_Trade[shippedDate])) <= CALCULATE(MAX(Fact_Trade[requiredDate])))), COUNTROWS(expediees)) * 100

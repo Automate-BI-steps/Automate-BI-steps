@@ -1,0 +1,74 @@
+[
+  {
+    "kpi": "total_revenue",
+    "agent": 1265793.04,
+    "reference": 1265793.0395,
+    "source": "recalcul pandas brut",
+    "ecart": 0.0005,
+    "statut": "identique"
+  },
+  {
+    "kpi": "order_count",
+    "agent": 830.0,
+    "reference": 830.0,
+    "source": "recalcul pandas brut",
+    "ecart": 0.0,
+    "statut": "identique"
+  },
+  {
+    "kpi": "avg_order_value",
+    "agent": 1525.05,
+    "reference": 1525.0519,
+    "source": "recalcul pandas brut",
+    "ecart": 0.0019,
+    "statut": "identique"
+  },
+  {
+    "kpi": "avg_lead_time",
+    "agent": 8.49,
+    "reference": 8.492,
+    "source": "recalcul pandas brut",
+    "ecart": 0.002,
+    "statut": "identique"
+  },
+  {
+    "kpi": "on_time_rate",
+    "agent": 95.43,
+    "reference": 95.4265,
+    "source": "recalcul pandas brut",
+    "ecart": 0.0035,
+    "statut": "identique"
+  },
+  {
+    "kpi": "top_countries",
+    "agent": 19.4,
+    "reference": 19.4016,
+    "source": "recalcul pandas brut",
+    "ecart": 0.0016,
+    "statut": "identique"
+  },
+  {
+    "kpi": "top_products",
+    "agent": 11.17,
+    "reference": 11.1706,
+    "source": "recalcul pandas brut",
+    "ecart": 0.0006,
+    "statut": "identique"
+  },
+  {
+    "kpi": "yoy_growth 2014",
+    "agent": 61.29,
+    "reference": 61.2903,
+    "source": "recalcul pandas brut",
+    "ecart": 0.0003,
+    "statut": "identique"
+  },
+  {
+    "kpi": "yoy_growth 2015",
+    "agent": 79.77,
+    "reference": 79.7708,
+    "source": "recalcul pandas brut",
+    "ecart": 0.0008,
+    "statut": "identique"
+  }
+]

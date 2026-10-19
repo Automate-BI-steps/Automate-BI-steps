@@ -1,0 +1,146 @@
+[
+  {
+    "id": "total_revenue",
+    "nom": "Total Revenue",
+    "definition": "Chiffre d'affaires total",
+    "formule": "Somme des montants",
+    "bo": "BO3",
+    "pourquoi": "Mesure de base de la performance commerciale (BO3).",
+    "dax": "SUM(Fact_Trade[lineTotal])",
+    "unite": "valeur",
+    "colonnes_sources": [
+      "lineTotal"
+    ],
+    "origine": {
+      "lineTotal": "calculé : unitPrice × quantity × (1 − discount)"
+    }
+  },
+  {
+    "id": "order_count",
+    "nom": "Order Count",
+    "definition": "Nombre de commandes distinctes",
+    "formule": "Nombre de commandes différentes",
+    "bo": "BO3",
+    "pourquoi": "Mesure le volume d'activité (BO3).",
+    "dax": "DISTINCTCOUNT(Fact_Trade[orderID])",
+    "unite": "commandes",
+    "colonnes_sources": [
+      "orderID"
+    ],
+    "origine": {
+      "orderID": "order_details"
+    }
+  },
+  {
+    "id": "avg_order_value",
+    "nom": "Average Order Value",
+    "definition": "Panier moyen par commande",
+    "formule": "Chiffre d'affaires / nombre de commandes",
+    "bo": "BO3",
+    "pourquoi": "Montre la valeur moyenne d'une vente (BO3).",
+    "dax": "DIVIDE([Total Revenue], [Order Count])",
+    "unite": "valeur",
+    "colonnes_sources": [
+      "lineTotal",
+      "orderID"
+    ],
+    "origine": {
+      "lineTotal": "calculé : unitPrice × quantity × (1 − discount)",
+      "orderID": "order_details"
+    }
+  },
+  {
+    "id": "yoy_growth",
+    "nom": "YoY Growth",
+    "definition": "Croissance annuelle du CA (mêmes mois)",
+    "formule": "(CA année N - CA année N-1) / CA année N-1, sur les mêmes mois",
+    "bo": "BO3",
+    "pourquoi": "KPI cité dans le rapport : montre l'évolution de la performance dans le temps (BO3).",
+    "dax": "VAR cur = SUM(Fact_Trade[lineTotal]) VAR prev = CALCULATE(SUM(Fact_Trade[lineTotal]), SAMEPERIODLASTYEAR(Dim_Date[Date])) RETURN DIVIDE(cur - prev, prev)",
+    "unite": "%",
+    "colonnes_sources": [
+      "lineTotal",
+      "orderDate"
+    ],
+    "origine": {
+      "lineTotal": "calculé : unitPrice × quantity × (1 − discount)",
+      "orderDate": "orders"
+    }
+  },
+  {
+    "id": "top_countries",
+    "nom": "Top Countries",
+    "definition": "5 premiers pays et leur part du CA",
+    "formule": "Somme par pays, du plus grand au plus petit",
+    "bo": "BO3",
+    "pourquoi": "Besoin de Leila (KPI pays fiables) : révèle les marchés clés et la dépendance géographique (BO3).",
+    "dax": "DIVIDE(SUM(Fact_Trade[lineTotal]), CALCULATE(SUM(Fact_Trade[lineTotal]), ALL(Fact_Trade[country])))",
+    "unite": "valeur / %",
+    "colonnes_sources": [
+      "lineTotal",
+      "country"
+    ],
+    "origine": {
+      "lineTotal": "calculé : unitPrice × quantity × (1 − discount)",
+      "country": "customers"
+    }
+  },
+  {
+    "id": "top_products",
+    "nom": "Top Products",
+    "definition": "5 premiers produits et leur part du CA",
+    "formule": "Somme par produit, du plus grand au plus petit",
+    "bo": "BO3",
+    "pourquoi": "Besoin de Leila (KPI produits fiables) : révèle les produits qui font le chiffre d'affaires (BO3).",
+    "dax": "DIVIDE(SUM(Fact_Trade[lineTotal]), CALCULATE(SUM(Fact_Trade[lineTotal]), ALL(Fact_Trade[productName])))",
+    "unite": "valeur / %",
+    "colonnes_sources": [
+      "lineTotal",
+      "productName"
+    ],
+    "origine": {
+      "lineTotal": "calculé : unitPrice × quantity × (1 − discount)",
+      "productName": "products"
+    }
+  },
+  {
+    "id": "avg_lead_time",
+    "nom": "Average Shipping Lead Time",
+    "definition": "Délai moyen entre commande et expédition",
+    "formule": "Moyenne (date d'expédition - date de commande)",
+    "bo": "BO3",
+    "pourquoi": "Performance logistique (BO3) : rapidité de traitement des commandes.",
+    "dax": "AVERAGEX(VALUES(Fact_Trade[orderID]), DATEDIFF(CALCULATE(MIN(Fact_Trade[orderDate])), CALCULATE(MAX(Fact_Trade[shippedDate])), DAY))",
+    "unite": "jours",
+    "colonnes_sources": [
+      "orderDate",
+      "shippedDate",
+      "orderID"
+    ],
+    "origine": {
+      "orderDate": "orders",
+      "shippedDate": "orders",
+      "orderID": "order_details"
+    }
+  },
+  {
+    "id": "on_time_rate",
+    "nom": "On-Time Shipping Rate",
+    "definition": "Part des commandes expédiées à temps",
+    "formule": "Commandes expédiées avant la date exigée / commandes expédiées",
+    "bo": "BO3",
+    "pourquoi": "Performance logistique (BO3) : respect de la date de livraison exigée.",
+    "dax": "VAR expediees = FILTER(VALUES(Fact_Trade[orderID]), NOT ISBLANK(CALCULATE(MAX(Fact_Trade[shippedDate])))) RETURN DIVIDE(COUNTROWS(FILTER(expediees, CALCULATE(MAX(Fact_Trade[shippedDate])) <= CALCULATE(MAX(Fact_Trade[requiredDate])))), COUNTROWS(expediees)) * 100",
+    "unite": "%",
+    "colonnes_sources": [
+      "shippedDate",
+      "requiredDate",
+      "orderID"
+    ],
+    "origine": {
+      "shippedDate": "orders",
+      "requiredDate": "orders",
+      "orderID": "order_details"
+    }
+  }
+]
