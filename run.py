@@ -23,15 +23,24 @@ if __name__ == "__main__":
             v = f"croissance (mêmes mois) : {en_json(v['croissance_pct'])}"
         print(f"  {r['nom']:<28} {v} {r['unite'] if not isinstance(r['valeur'], (list, dict)) else ''}")
 
-    ignores = next((e["ignores"] for e in etat.get("audit_log", []) if e["etape"] == "calculer_kpi"), {})
+    ignores = next((e.get("ignores_detail", {}) for e in etat.get("audit_log", [])
+                    if e["etape"] == "calculer_kpi"), {})
     if ignores:
         print("\n=== 3. KPI non calculables sur ce dataset ===")
-        for kid, raison in ignores.items():
-            print(f"  {kid:<16} {raison}")
+        for kid, d in ignores.items():
+            print(f"  {d['nom']} ({kid})\n    formule : {d['formule']}\n    {d['raison']}")
 
     print("\n=== 4. Contrôles ===")
     for c in etat.get("kpi_checks", []):
         print(f"  [{c['statut']}] {c['controle']} : {c['detail']}")
+
+    print("\n=== 5. Analyse des KPI ===")
+    for a in etat.get("kpi_analysis", []):
+        print(f"  [{a['niveau']}] {a['nom']} : {a['constat']}")
+        if a.get("interpretation"):
+            print(f"      -> {a['interpretation']}")
+    if etat.get("kpi_summary"):
+        print("\n  Résumé (LLM) :", etat["kpi_summary"])
 
     if etat.get("errors"):
         print("\nErreurs :", etat["errors"])

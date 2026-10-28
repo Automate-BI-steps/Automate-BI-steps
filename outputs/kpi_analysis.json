@@ -1,0 +1,102 @@
+[
+  {
+    "kpi_id": "total_revenue",
+    "nom": "Total Revenue",
+    "constat": "Le chiffre d'affaires total est de 1 265 793.",
+    "regle": "Constat : valeur du KPI.",
+    "niveau": "info",
+    "interpretation": "Le chiffre d'affaires total est de 1 265 793, ce qui signifie que les ventes totales de l'entreprise sont de 1 265 793.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "avg_order_value",
+    "nom": "Average Order Value",
+    "constat": "830 commandes, soit un panier moyen de 1 525,05 par commande.",
+    "regle": "Constat : panier moyen = CA / nombre de commandes.",
+    "niveau": "info",
+    "interpretation": "Le panier moyen est de 1 525,05, ce qui signifie que les clients ont en moyenne un panier de 1 525,05 euros lors de leur commande.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "yoy_growth",
+    "nom": "YoY Growth",
+    "constat": "Le CA augmente de 79,8 % en 2015 par rapport à 2014, sur les mêmes mois.",
+    "regle": "Croissance négative = point d'attention.",
+    "niveau": "info",
+    "interpretation": "Le CA augmente de 79,8 % en 2015 par rapport à 2014, ce qui signifie que les ventes de l'entreprise ont augmenté de 79,8 % en 2015 par rapport à 2014.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "yoy_growth",
+    "nom": "YoY Growth",
+    "constat": "Année(s) incomplète(s) : 2013, 2015. Leurs totaux ne sont pas comparables d'une année à l'autre.",
+    "regle": "Moins de 12 mois couverts dans l'année.",
+    "niveau": "attention",
+    "interpretation": "Année(s) incomplète(s) : 2013, 2015. Leurs totaux ne sont pas comparables d'une année à l'autre, ce qui signifie que les données de 2013 et 2015 ne sont pas fiables pour la comparaison avec les autres années.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "top_countries",
+    "nom": "Top Countries",
+    "constat": "Le pays n°1 est « USA » avec 245 585 (19,4 % du total).",
+    "regle": "Constat : premier du classement et sa part.",
+    "niveau": "info",
+    "interpretation": "Le pays n°1 est « USA » avec 245 585 (19,4 % du total), ce qui signifie que les États-Unis sont le premier pays en termes de chiffre d'affaires avec 245 585 euros, soit 19,4 % du total.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "top_countries",
+    "nom": "Top Countries",
+    "constat": "Les 3 premiers pays représentent 47,7 % du total.",
+    "regle": "Part cumulée du top 3 > 60 % : forte concentration.",
+    "niveau": "info",
+    "interpretation": "Les 3 premiers pays représentent 47,7 % du total, ce qui signifie que les trois premiers pays en termes de chiffre d'affaires représentent 47,7 % du total des ventes de l'entreprise.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "top_products",
+    "nom": "Top Products",
+    "constat": "Le produit n°1 est « Côte de Blaye » avec 141 397 (11,2 % du total).",
+    "regle": "Constat : premier du classement et sa part.",
+    "niveau": "info",
+    "interpretation": "Le produit n°1 est « Côte de Blaye » avec 141 397 (11,2 % du total), ce qui signifie que le produit « Côte de Blaye » est le premier en termes de chiffre d'affaires avec 141 397 euros, soit 11,2 % du total.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "top_products",
+    "nom": "Top Products",
+    "constat": "Les 3 premiers produits représentent 23,1 % du total.",
+    "regle": "Part cumulée du top 3 > 60 % : forte concentration.",
+    "niveau": "info",
+    "interpretation": "Les 3 premiers produits représentent 23,1 % du total, ce qui signifie que les trois premiers produits en termes de chiffre d'affaires représentent 23,1 % du total des ventes de l'entreprise.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "avg_lead_time",
+    "nom": "Average Shipping Lead Time",
+    "constat": "Une commande est expédiée en moyenne 8,5 jours après sa date de commande.",
+    "regle": "Constat : moyenne (date d'expédition - date de commande), une ligne par commande.",
+    "niveau": "info",
+    "interpretation": "Une commande est expédiée en moyenne 8,5 jours après sa date de commande, ce qui signifie que les commandes sont expédiées en moyenne 8,5 jours après leur date de commande.",
+    "verifie": true,
+    "source": "LLM"
+  },
+  {
+    "kpi_id": "on_time_rate",
+    "nom": "On-Time Shipping Rate",
+    "constat": "95,4 % des commandes expédiées le sont avant la date exigée.",
+    "regle": "Ponctualité < 90 % : point d'attention.",
+    "niveau": "info",
+    "interpretation": "95,4 % des commandes expédiées le sont avant la date exigée, ce qui signifie que 95,4 % des commandes sont expédiées avant la date exigée par les clients.",
+    "verifie": true,
+    "source": "LLM"
+  }
+]

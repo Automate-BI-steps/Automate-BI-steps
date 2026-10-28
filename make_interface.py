@@ -25,7 +25,8 @@ def main():
     reference = ICI / "reference_powerbi.csv"                # à remplir avec ton rapport Power BI manuel
     justesse = verifier(etat["kpi_results"], chemin, reference)
     donnees = en_json({"res": etat["kpi_results"], "cat": etat["kpi_catalog"], "aud": etat["audit_log"],
-                       "acc": justesse})
+                       "acc": justesse, "ana": etat.get("kpi_analysis", []),
+                       "resume": etat.get("kpi_summary")})
     contenu = json.dumps(donnees, ensure_ascii=False).replace("</", "<\\/")
     page = (ICI / "interface_template.html").read_text("utf-8")
     page = page.replace("<script>\nconst $=", f"<script>window.__DATA__={contenu};</script>\n<script>\nconst $=", 1)

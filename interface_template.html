@@ -36,7 +36,7 @@ svg{display:block;max-width:100%}svg text{fill:var(--mute);font-size:10px}
 code,pre{font:.8rem ui-monospace,Consolas,monospace;background:var(--soft);border-radius:6px}code{padding:1px 6px}pre{padding:10px;overflow-x:auto;white-space:pre-wrap;margin:0}
 input[type=search]{font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);width:100%;max-width:340px;margin-bottom:10px}
 .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:6px 12px;font:inherit;font-size:.84rem;cursor:pointer}
-.flow{display:grid;gap:10px;grid-template-columns:repeat(6,1fr)}@media(max-width:900px){.flow{grid-template-columns:repeat(2,1fr)}}
+.flow{display:grid;gap:10px;grid-template-columns:repeat(7,1fr)}@media(max-width:900px){.flow{grid-template-columns:repeat(2,1fr)}}
 .st{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:12px;font:inherit;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
 .st b{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--soft);color:var(--acc);margin-bottom:6px;font-size:.85rem}
 .st span{display:block;font-weight:600;font-size:.88rem}.st small{color:var(--mute);font-size:.75rem}
@@ -50,18 +50,18 @@ section[hidden]{display:none}#msg{font-size:.82rem;color:var(--mute);margin:0 0 
 <header>
 <div class="bar"><span class="logo">Agent <i>4</i> · Semantic &amp; KPI</span><span class="meta" id="per"></span><span class="sp"></span><span class="badge" id="bd" hidden></span>
 <label class="btn" for="f">Charger des fichiers</label><input type="file" id="f" accept=".json" multiple hidden></div>
-<nav role="tablist"><button role="tab" aria-selected="true" data-t="A">Résultats</button><button role="tab" aria-selected="false" data-t="B">Fonctionnement</button><button role="tab" aria-selected="false" data-t="C">KPI catalog</button><button role="tab" aria-selected="false" data-t="D">Justesse</button></nav>
+<nav role="tablist"><button role="tab" aria-selected="true" data-t="A">Résultats</button><button role="tab" aria-selected="false" data-t="B">Fonctionnement</button><button role="tab" aria-selected="false" data-t="C">KPI catalog</button><button role="tab" aria-selected="false" data-t="D">Justesse</button><button role="tab" aria-selected="false" data-t="E">Analyse</button></nav>
 </header>
-<main><p id="msg" aria-live="polite"></p><section id="A"></section><section id="B" hidden></section><section id="C" hidden></section><section id="D" hidden></section></main>
+<main><p id="msg" aria-live="polite"></p><section id="A"></section><section id="B" hidden></section><section id="C" hidden></section><section id="D" hidden></section><section id="E" hidden></section></main>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=(v,d=2)=>typeof v=="number"?v.toLocaleString("fr-FR",{maximumFractionDigits:d}):esc(v??"—");
 const short=v=>typeof v!="number"?"—":Math.abs(v)>=1e6?(v/1e6).toLocaleString("fr-FR",{maximumFractionDigits:2})+" M":Math.abs(v)>=1e3?(v/1e3).toLocaleString("fr-FR",{maximumFractionDigits:1})+" k":fmt(v);
-let D={res:null,cat:null,aud:null,acc:null},topKey="top_countries",stepKey="charger_donnees";
+let D={res:null,cat:null,aud:null,acc:null,ana:null},topKey="top_countries",stepKey="charger_donnees";
 const val=k=>D.res&&D.res[k]?D.res[k].valeur:null,ev=s=>(D.aud||[]).find(e=>e.etape==s);
 const COL=["var(--acc)","var(--acc2)","var(--c3)","#d9467a"];
-const STEPS=[["charger_donnees","Chargement","Récupère la table de faits (fact_trade)."],["comprendre_colonnes","Colonnes → rôles","Devine le rôle de chaque colonne."],["calculer_kpi","Calcul des KPI","Calcule les KPI dont les colonnes existent."],["documenter_kpi","Documentation","Écrit définition, formule et DAX."],["controler","Contrôles","Vérifie la cohérence des chiffres."],["exporter","Export","Écrit les fichiers et le journal."]];
+const STEPS=[["charger_donnees","Chargement","Récupère la table de faits (fact_trade)."],["comprendre_colonnes","Colonnes → rôles","Devine le rôle de chaque colonne."],["calculer_kpi","Calcul des KPI","Calcule les KPI dont les colonnes existent."],["documenter_kpi","Documentation","Écrit définition, formule et DAX."],["controler","Contrôles","Vérifie la cohérence des chiffres."],["analyser_kpi","Analyse","Écrit un constat par KPI (règles, sans LLM)."],["exporter","Export","Écrit les fichiers et le journal."]];
 
 function ring(p){const r=44,c=2*Math.PI*r,o=c*(1-Math.min(Math.max(p,0),100)/100);
 return`<svg viewBox="0 0 120 120" width="130" role="img" aria-label="${fmt(p)} % expédiées à temps"><circle cx="60" cy="60" r="${r}" fill="none" stroke="var(--soft)" stroke-width="12"/><circle cx="60" cy="60" r="${r}" fill="none" stroke="var(--acc)" stroke-width="12" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${o}" transform="rotate(-90 60 60)"/><text x="60" y="66" text-anchor="middle" style="font-size:22px;font-weight:800;fill:var(--ink)">${fmt(p,1)}%</text></svg>`}
@@ -79,15 +79,15 @@ if(y&&y.ca_par_annee)h+=`<div class="card c6"><h3>CA par année <span>croissance
 if(r.on_time_rate||r.avg_lead_time)h+=`<div class="card c6"><h3>Livraison</h3><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">${r.on_time_rate?ring(r.on_time_rate.valeur):""}<div><b style="font-size:1.5rem">${r.avg_lead_time?fmt(r.avg_lead_time.valeur,1)+" j":"—"}</b><br><small style="color:var(--mute)">délai moyen commande → expédition</small><br><small style="color:var(--mute)">Anneau : part des commandes expédiées à temps</small></div></div></div>`;
 const tops=["top_countries","top_products"].filter(k=>r[k]);
 if(tops.length){if(!tops.includes(topKey))topKey=tops[0];h+=`<div class="card c6"><h3>Classements <span>top 5 · part du CA</span></h3><div class="pills">${tops.map(k=>`<button class="pill" data-top="${k}" aria-pressed="${k==topKey}">${esc(r[k].nom.replace("Top ",""))}</button>`).join("")}</div>${hbars(r[topKey].valeur)}</div>`}
-const ig=(ev("calculer_kpi")||{}).ignores||{},ik=Object.keys(ig);
-h+=r.trade_balance?kpi("total_exports","valeur")+kpi("total_imports","valeur")+kpi("trade_balance","exports − imports")+kpi("coverage_ratio","couverture des imports"):`<div class="card c6"><h3>Commerce international <span class="tag w">non calculable</span></h3>${ik.length?ik.map(k=>`<div style="margin:6px 0"><b>${esc(k)}</b><br><small style="color:var(--mute)">${esc(ig[k])}</small></div>`).join(""):"—"}<small style="color:var(--mute)">Le dataset n'a pas de colonne Import/Export.</small></div>`;
+const ig=(ev("calculer_kpi")||{}).ignores_detail||{},ik=Object.keys(ig);
+h+=r.trade_balance?kpi("total_exports","valeur")+kpi("total_imports","valeur")+kpi("trade_balance","exports − imports")+kpi("coverage_ratio","couverture des imports"):`<div class="card c6"><h3>Commerce international <span class="tag w">non calculable</span></h3>${ik.length?ik.map(k=>`<div style="margin:10px 0;padding-bottom:10px;border-bottom:1px solid var(--line)"><b>${esc(ig[k].nom)}</b><br><small style="color:var(--mute)">Formule :</small> <code>${esc(ig[k].formule)}</code><br><small style="color:var(--mute)">${esc(ig[k].raison)}</small></div>`).join(""):"—"}</div>`;
 return h+`</div>`}
 
 function detail(e){if(!e)return`<p style="color:var(--mute)">Cette étape n'a pas été exécutée.</p>`;
 let h=`<p><b>${esc(e.message)}</b> <small style="color:var(--mute)">· ${esc((e.heure||"").replace("T"," "))}</small></p>`;
 if(e.tables)h+=`<div class="scroll"><table><tr><th>Table</th><th>Lignes</th></tr>${Object.entries(e.tables).map(([a,b])=>`<tr><td><code>${esc(a)}</code></td><td>${fmt(b,0)}</td></tr>`).join("")}</table></div>`;
 if(e.mapping)h+=`<div class="scroll"><table><tr><th>Rôle</th><th>Colonne trouvée</th></tr>${Object.entries(e.mapping).map(([a,b])=>`<tr><td><code>${esc(a)}</code></td><td>${esc(b)}</td></tr>`).join("")}</table></div>`;
-if(e.calcules)h+=`<h3 style="margin:12px 0 6px;font-size:.8rem;color:var(--mute)">CALCULÉS</h3><div class="chips">${e.calcules.map(k=>`<span class="tag">${esc(k)}</span>`).join("")}</div>`+(Object.keys(e.ignores||{}).length?`<h3 style="margin:12px 0 6px;font-size:.8rem;color:var(--mute)">IGNORÉS</h3>${Object.entries(e.ignores).map(([k,v])=>`<div><span class="tag w">${esc(k)}</span> <small style="color:var(--mute)">${esc(v)}</small></div>`).join("")}`:"");
+if(e.calcules)h+=`<h3 style="margin:12px 0 6px;font-size:.8rem;color:var(--mute)">CALCULÉS</h3><div class="chips">${e.calcules.map(k=>`<span class="tag">${esc(k)}</span>`).join("")}</div>`+(Object.keys(e.ignores_detail||{}).length?`<h3 style="margin:12px 0 6px;font-size:.8rem;color:var(--mute)">IGNORÉS</h3>${Object.entries(e.ignores_detail).map(([k,v])=>`<div style="margin:8px 0"><span class="tag w">${esc(v.nom)}</span><br><small style="color:var(--mute)">Formule :</small> <code>${esc(v.formule)}</code><br><small style="color:var(--mute)">${esc(v.raison)}</small></div>`).join("")}`:"");
 if(e.controles)h+=`<div class="scroll"><table><tr><th>Contrôle</th><th>Résultat</th><th>Statut</th></tr>${e.controles.map(c=>`<tr><td>${esc(c.controle)}</td><td>${esc(c.detail)}</td><td><span class="tag ${c.statut=="ok"?"":"w"}">${esc(c.statut)}</span></td></tr>`).join("")}</table></div>`;
 return h}
 function viewB(){if(!D.res)return empty();
@@ -103,22 +103,26 @@ if(!a||!a.length)return`<div class="card"><h3>Justesse des KPI</h3><p style="col
 const ok=a.filter(x=>x.statut=="identique").length;
 return`<div class="grid"><div class="card kpi c4"><h3>Résultat</h3><b>${ok}/${a.length}</b><small>valeurs identiques à la référence</small></div><div class="card c8"><h3>Agent contre référence <span>tolérance 0,01</span></h3><div class="scroll"><table><tr><th>KPI</th><th>Agent</th><th>Référence</th><th>Source</th><th>Écart</th><th>Statut</th></tr>${a.map(x=>`<tr><td>${esc(x.kpi)}</td><td>${fmt(x.agent,4)}</td><td>${fmt(x.reference,4)}</td><td>${esc(x.source)}</td><td>${fmt(x.ecart,4)}</td><td><span class="tag ${x.statut=="identique"?"":"w"}">${esc(x.statut)}</span></td></tr>`).join("")}</table></div></div></div>`}
 
-function render(){try{$("A").innerHTML=viewA();$("B").innerHTML=viewB();$("C").innerHTML=viewC();$("D").innerHTML=viewD();
+function viewE(){if(!D.res)return empty();const a=D.ana;
+if(!a||!a.length)return`<div class="card"><h3>Analyse des KPI</h3><p style="color:var(--mute);margin:0">Aucune analyse chargée. Lance <code>python make_interface.py</code>, ou charge <code>kpi_analysis.json</code>.</p></div>`;
+const w=a.filter(x=>x.niveau=="attention").length,llm=a.some(x=>x.interpretation);
+return`<div class="grid"><div class="card kpi c4"><h3>Points d'attention</h3><b>${w}</b><small>sur ${a.length} constats</small></div><div class="card c8"><h3>Résumé <span class="tag ${llm?"":"w"}">${llm?"rédigé par le LLM":"règles seulement"}</span></h3><p style="margin:0">${D.resume?esc(D.resume):'<span style="color:var(--mute)">Pas de résumé LLM (lance avec USE_LLM=1, ou le LLM a utilisé un chiffre inconnu et sa phrase a été rejetée).</span>'}</p></div><div class="card c12"><h3>Constats <span>chiffres vérifiés contre les KPI</span></h3><div class="scroll"><table><tr><th>KPI</th><th>Constat (règle)</th><th>Interprétation</th><th>Règle appliquée</th><th>Niveau</th></tr>${a.map(x=>`<tr><td>${esc(x.nom)}</td><td>${esc(x.constat)}</td><td>${x.interpretation?esc(x.interpretation)+' <span class="tag">LLM</span>':'<small style="color:var(--mute)">—</small>'}</td><td><small style="color:var(--mute)">${esc(x.regle)}</small></td><td><span class="tag ${x.niveau=="attention"?"w":""}">${esc(x.niveau)}</span></td></tr>`).join("")}</table></div></div></div>`}
+function render(){try{$("A").innerHTML=viewA();$("B").innerHTML=viewB();$("C").innerHTML=viewC();$("D").innerHTML=viewD();$("E").innerHTML=viewE();
 document.querySelectorAll("[data-top]").forEach(b=>b.onclick=()=>{topKey=b.dataset.top;render()});
 document.querySelectorAll("[data-step]").forEach(b=>b.onclick=()=>{stepKey=b.dataset.step;render()});
 if($("q")){$("q").oninput=drawCat;drawCat()}drawStep();
 const ck=(ev("controler")||{}).controles,bd=$("bd");if(ck){const w=ck.filter(c=>c.statut!="ok").length;bd.hidden=false;bd.className="badge"+(w?" w":"");bd.textContent=w?`${w} avertissement(s)`:"Contrôles OK";bd.title=ck.filter(c=>c.statut!="ok").map(c=>c.controle+" : "+c.detail).join(" ; ")}
 $("per").textContent=D.res?Object.keys(D.res).length+" KPI calculés":""}
 catch(e){$("A").innerHTML=`<div class="empty"><b>Erreur d'affichage</b>${esc(e.message)}</div>`}}
-function load(res,cat,aud,acc){D={res,cat,aud,acc};render()}
-async function ingest(files){const n={res:D.res,cat:D.cat,aud:D.aud,acc:D.acc},ok=[],ko=[];
+function load(res,cat,aud,acc,ana,resume){D={res,cat,aud,acc,ana,resume:resume===undefined?D.resume:resume};render()}
+async function ingest(files){const n={res:D.res,cat:D.cat,aud:D.aud,acc:D.acc,ana:D.ana},ok=[],ko=[];
 for(const f of files){try{const j=JSON.parse((await f.text()).replace(/\bNaN\b/g,"null"));
-if(Array.isArray(j)&&j[0]&&"reference" in j[0]){n.acc=j;ok.push(f.name)}else if(Array.isArray(j)&&j[0]&&"dax" in j[0]){n.cat=j;ok.push(f.name)}else if(Array.isArray(j)){n.aud=j;ok.push(f.name)}else if(j&&typeof j=="object"){n.res=j;ok.push(f.name)}else ko.push(f.name)}catch(x){ko.push(f.name+" : "+x.message)}}
-$("msg").textContent=(ok.length?"Lus : "+ok.join(", "):"")+(ko.length?"  Erreur : "+ko.join(" | "):"");load(n.res,n.cat,n.aud,n.acc)}
+if(Array.isArray(j)&&j[0]&&"constat" in j[0]){n.ana=j;ok.push(f.name)}else if(Array.isArray(j)&&j[0]&&"reference" in j[0]){n.acc=j;ok.push(f.name)}else if(Array.isArray(j)&&j[0]&&"dax" in j[0]){n.cat=j;ok.push(f.name)}else if(Array.isArray(j)){n.aud=j;ok.push(f.name)}else if(j&&typeof j=="object"){n.res=j;ok.push(f.name)}else ko.push(f.name)}catch(x){ko.push(f.name+" : "+x.message)}}
+$("msg").textContent=(ok.length?"Lus : "+ok.join(", "):"")+(ko.length?"  Erreur : "+ko.join(" | "):"");load(n.res,n.cat,n.aud,n.acc,n.ana)}
 $("f").onchange=async e=>{await ingest(e.target.files);e.target.value=""};
 addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>{e.preventDefault();ingest(e.dataTransfer.files)});
-document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x==b));["A","B","C","D"].forEach(i=>$(i).hidden=i!=b.dataset.t)});
-if(window.__DATA__){const d=window.__DATA__;load(d.res,d.cat,d.aud,d.acc)}else render();
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x==b));["A","B","C","D","E"].forEach(i=>$(i).hidden=i!=b.dataset.t)});
+if(window.__DATA__){const d=window.__DATA__;load(d.res,d.cat,d.aud,d.acc,d.ana,d.resume)}else render();
 </script>
 </body>
 </html>

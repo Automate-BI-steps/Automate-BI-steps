@@ -1,13 +1,14 @@
 """Agent 4 — Semantic & KPI (DSO4) : l'agent qui définit et calcule les KPI.
 
-Remplace l'étape « mesures DAX » de Power BI. Il fait 6 étapes, dans cet ordre :
+Remplace l'étape « mesures DAX » de Power BI. Il fait 7 étapes, dans cet ordre :
 
   1 charger_donnees     récupère la table de faits (fact_trade)
   2 comprendre_colonnes associe chaque colonne à un rôle (date, montant, pays...)
   3 calculer_kpi        calcule les KPI possibles avec pandas
   4 documenter_kpi      écrit le KPI catalog et les mesures DAX
   5 controler           vérifie la cohérence des chiffres
-  6 exporter            écrit les fichiers de sortie et le journal d'audit
+  6 analyser_kpi        écrit un constat par KPI (règles explicites, sans LLM)
+  7 exporter            écrit les fichiers de sortie et le journal d'audit
 
 Dans le graphe de l'équipe :  main.add_node("semantic_kpi", build_graph())
 """
@@ -22,9 +23,19 @@ import numpy as np
 import pandas as pd
 from langgraph.graph import END, StateGraph
 
+from analysis import analyser, analyser_llm
 from data import load_fact_table
 from kpis import CATALOG, standardise
-from mapping import map_columns
+from mapping import ROLES, map_columns
+
+
+def expliquer_ignore(k, manquants: list) -> dict:
+    """Pourquoi un KPI n'a pas pu être calculé : sa formule + ce qui manque dans le dataset."""
+    besoin = " ; ".join(f"« {ROLES[r][0]} »" if r in ROLES else r for r in manquants)
+    return {"nom": k.nom, "formule": k.formule, "unite": k.unite, "pourquoi_kpi": k.pourquoi,
+            "manquants": manquants,
+            "raison": f"Non calculé : le dataset ne contient pas de colonne identifiée comme {besoin}. "
+                      f"Sans elle, la formule ci-dessus ne peut pas être appliquée."}
 
 
 class State(TypedDict, total=False):
@@ -36,6 +47,8 @@ class State(TypedDict, total=False):
     kpi_catalog: list                       # sortie : définition de chaque KPI
     dax_measures: dict                      # sortie : mesures DAX
     kpi_checks: list                        # sortie : contrôles de cohérence
+    kpi_analysis: list                      # sortie : un constat par KPI (règle + niveau + interprétation LLM)
+    kpi_summary: str                        # sortie : résumé rédigé par le LLM (si USE_LLM=1)
     needs_human_validation: bool            # True si un contrôle a échoué
     validation_reasons: list                # pourquoi une validation humaine est conseillée
     mapping_sources: dict                   # rôle -> « LLM » ou « mots-clés »
@@ -89,11 +102,12 @@ def comprendre_colonnes(state: State) -> dict:
 def calculer_kpi(state: State) -> dict:
     mapping = state["semantic_mapping"]
     d = standardise(state["fact_trade"], mapping)
-    resultats, ignores, erreurs = {}, {}, []
+    resultats, ignores, details, erreurs = {}, {}, {}, []
     for k in CATALOG:
         manquants = [r for r in k.requires if r not in mapping]
         if manquants:                                            # il manque des colonnes : on saute
             ignores[k.id] = f"rôles manquants : {manquants}"
+            details[k.id] = expliquer_ignore(k, manquants)
             continue
         try:
             resultats[k.id] = {"nom": k.nom, "valeur": k.compute(d), "unite": k.unite,
@@ -105,7 +119,8 @@ def calculer_kpi(state: State) -> dict:
             erreurs.append(f"KPI {k.id} en échec : {e}")
     return {"kpi_results": resultats, "errors": erreurs,
             "audit_log": [log("calculer_kpi", f"{len(resultats)}/{len(CATALOG)} KPI calculés",
-                              calcules=list(resultats), ignores=ignores)]}
+                              calcules=list(resultats), ignores=ignores,
+                              ignores_detail=details)]}
 
 
 def documenter_kpi(state: State) -> dict:
@@ -163,14 +178,33 @@ def controler(state: State) -> dict:
                               else "Tous les contrôles sont OK", controles=checks, raisons=raisons)]}
 
 
+def analyser_kpi(state: State) -> dict:
+    """Constats descriptifs sur les KPI. Les recommandations restent à l'agent BI Analyst (DSO5-6)."""
+    constats = analyser(state["kpi_results"])                    # 1) constats par règles (toujours)
+    attention = sum(c["niveau"] == "attention" for c in constats)
+    resume, methode, rejetees = None, "règles", 0
+    if os.getenv("USE_LLM", "0") == "1":                          # 2) le LLM rédige l'interprétation
+        try:
+            constats, resume, rejetees = analyser_llm(state["kpi_results"], constats)
+            methode = "LLM + vérification des chiffres"
+        except Exception:
+            methode = "règles (LLM indisponible)"
+    return {"kpi_analysis": constats, "kpi_summary": resume,
+            "audit_log": [log("analyser_kpi", f"{len(constats)} constats, {attention} point(s) d'attention "
+                                              f"({methode})", methode=methode, phrases_rejetees=rejetees,
+                              resume=resume, constats=constats)]}
+
+
 def exporter(state: State) -> dict:
     dossier = Path(os.getenv("OUTPUT_DIR", "outputs"))
     dossier.mkdir(parents=True, exist_ok=True)
     fichiers = {"kpi_catalog": dossier / "kpi_catalog.json", "kpi_results": dossier / "kpi_results.json",
-                "dax_measures": dossier / "dax_measures.dax", "audit_log": dossier / "agent4_audit_log.json"}
+                "dax_measures": dossier / "dax_measures.dax", "audit_log": dossier / "agent4_audit_log.json",
+                "kpi_analysis": dossier / "kpi_analysis.json"}
     ecrire = lambda chemin, obj: chemin.write_text(json.dumps(en_json(obj), ensure_ascii=False, indent=2), "utf-8")
     ecrire(fichiers["kpi_catalog"], state["kpi_catalog"])
     ecrire(fichiers["kpi_results"], state["kpi_results"])
+    ecrire(fichiers["kpi_analysis"], state.get("kpi_analysis", []))
     fichiers["dax_measures"].write_text(
         "\n\n".join(f"{nom} =\n{expr}" for nom, expr in state["dax_measures"].items()), "utf-8")
     ecrire(fichiers["audit_log"], state.get("audit_log", []))
@@ -184,7 +218,8 @@ def build_graph():
     g = StateGraph(State)
     for nom, fonction in [("charger_donnees", charger_donnees), ("comprendre_colonnes", comprendre_colonnes),
                           ("calculer_kpi", calculer_kpi), ("documenter_kpi", documenter_kpi),
-                          ("controler", controler), ("exporter", exporter)]:
+                          ("controler", controler), ("analyser_kpi", analyser_kpi),
+                          ("exporter", exporter)]:
         g.add_node(nom, fonction)
     g.set_entry_point("charger_donnees")
     g.add_conditional_edges("charger_donnees", lambda s: "suite" if s.get("fact_trade") is not None else "fin",
@@ -194,7 +229,8 @@ def build_graph():
     g.add_conditional_edges("calculer_kpi", lambda s: "suite" if s.get("kpi_results") else "fin",
                             {"suite": "documenter_kpi", "fin": END})
     g.add_edge("documenter_kpi", "controler")
-    g.add_edge("controler", "exporter")
+    g.add_edge("controler", "analyser_kpi")
+    g.add_edge("analyser_kpi", "exporter")
     g.add_edge("exporter", END)
     return g.compile()
 
