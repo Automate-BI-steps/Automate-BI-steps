@@ -1,0 +1,26 @@
+# Secrets
+.env
+
+# Environnement Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Rapports générés par les agents
+
+
+# Éditeurs / système
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Sorties des runs (state, tables nettoyées, historique)
+outputs/runs/
+outputs/cleaning/
+outputs/verification/
+
+# Interface React
+client/node_modules/
+client/dist/

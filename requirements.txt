@@ -1,0 +1,18 @@
+langgraph>=1.2
+langchain-core>=1.6
+langchain-groq>=1.1
+pandas>=3.0
+python-dotenv>=1.2
+charset-normalizer>=3.5
+truststore>=0.10
+openpyxl>=3.1
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+httpx>=0.27
+pytest>=7
+
+# Agent 3 (ETL) et Agent 4 (Semantic & KPI) — voir src/agents/etl/ et src/agents/semantic_kpi/
+requests>=2.31.0
+grandalf>=0.8
+numpy>=1.26
