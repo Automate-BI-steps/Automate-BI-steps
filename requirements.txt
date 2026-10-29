@@ -1,7 +1,0 @@
-langgraph>=1.2
-langchain-core>=1.6
-langchain-groq>=1.1
-pandas>=3.0
-python-dotenv>=1.2
-charset-normalizer>=3.5
-truststore>=0.10
