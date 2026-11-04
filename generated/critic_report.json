@@ -1,0 +1,14 @@
+{
+  "status": "ACCEPTED",
+  "passed_deterministic": true,
+  "errors": [],
+  "warnings": [],
+  "unsupported_claims": [],
+  "invalid_references": [],
+  "redundant_visuals": [],
+  "quality_feedback": [
+    "Evaluated 6 pages and 13 visual containers.",
+    "All field, measure, table, and KPI references successfully verified against data contract."
+  ],
+  "revision_suggestions": []
+}

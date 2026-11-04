@@ -1,0 +1,47 @@
+[
+  {
+    "id": "total_imports",
+    "name": "Total Imports",
+    "definition": "Sum of trade value for import transactions",
+    "expression": "SUM(value) where direction=Import",
+    "supported": true,
+    "source_columns": [
+      "value",
+      "direction"
+    ],
+    "dax": null
+  },
+  {
+    "id": "total_exports",
+    "name": "Total Exports",
+    "definition": "Sum of trade value for export transactions",
+    "expression": "SUM(value) where direction=Export",
+    "supported": true,
+    "source_columns": [
+      "value",
+      "direction"
+    ],
+    "dax": null
+  },
+  {
+    "id": "trade_balance",
+    "name": "Trade Balance",
+    "definition": "Total exports minus total imports",
+    "expression": "[Total Exports] - [Total Imports]",
+    "supported": true,
+    "source_columns": [
+      "value",
+      "direction"
+    ],
+    "dax": null
+  },
+  {
+    "id": "transaction_count",
+    "name": "Transaction Count",
+    "definition": "Number of trade transactions",
+    "expression": "COUNTROWS(FactTrade)",
+    "supported": true,
+    "source_columns": [],
+    "dax": null
+  }
+]

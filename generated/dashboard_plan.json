@@ -1,0 +1,434 @@
+{
+  "dashboard_title": "BI Flow Trade Intelligence Dashboard",
+  "business_objective": "Standard deterministic trade performance and quality overview.",
+  "target_audience": "Executive Leadership & Trade Operations",
+  "pages": [
+    {
+      "name": "ExecutiveOverview",
+      "display_name": "Executive Overview",
+      "description": "Headline indicators and trend.",
+      "visuals": [
+        {
+          "id": "total_imports_card",
+          "title": "Total Imports",
+          "visual_type": "card",
+          "kpi_reference": "total_imports",
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Measure",
+                "table": "FactTrade",
+                "name": "Total Imports"
+              }
+            ]
+          },
+          "selection_reason": "Standard KPI card for Total Imports.",
+          "priority": "high",
+          "evidence_references": [
+            "kpi:total_imports"
+          ],
+          "evidence": null
+        },
+        {
+          "id": "total_exports_card",
+          "title": "Total Exports",
+          "visual_type": "card",
+          "kpi_reference": "total_exports",
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Measure",
+                "table": "FactTrade",
+                "name": "Total Exports"
+              }
+            ]
+          },
+          "selection_reason": "Standard KPI card for Total Exports.",
+          "priority": "high",
+          "evidence_references": [
+            "kpi:total_exports"
+          ],
+          "evidence": null
+        },
+        {
+          "id": "trade_balance_card",
+          "title": "Trade Balance",
+          "visual_type": "card",
+          "kpi_reference": "trade_balance",
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Measure",
+                "table": "FactTrade",
+                "name": "Trade Balance"
+              }
+            ]
+          },
+          "selection_reason": "Standard KPI card for Trade Balance.",
+          "priority": "high",
+          "evidence_references": [
+            "kpi:trade_balance"
+          ],
+          "evidence": null
+        },
+        {
+          "id": "transaction_count_card",
+          "title": "Transaction Count",
+          "visual_type": "card",
+          "kpi_reference": "transaction_count",
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Measure",
+                "table": "FactTrade",
+                "name": "Transaction Count"
+              }
+            ]
+          },
+          "selection_reason": "Standard KPI card for Transaction Count.",
+          "priority": "high",
+          "evidence_references": [
+            "kpi:transaction_count"
+          ],
+          "evidence": null
+        },
+        {
+          "id": "trend",
+          "title": "Import and Export Trends",
+          "visual_type": "lineChart",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Category": [
+              {
+                "kind": "Column",
+                "table": "DimDate",
+                "name": "Date"
+              }
+            ],
+            "Y": [
+              {
+                "kind": "Measure",
+                "table": "FactTrade",
+                "name": "Total Imports"
+              },
+              {
+                "kind": "Measure",
+                "table": "FactTrade",
+                "name": "Total Exports"
+              }
+            ]
+          },
+          "selection_reason": "Headline import/export time trajectory.",
+          "priority": "high",
+          "evidence_references": [
+            "FactTrade.Value",
+            "DimDate.Date"
+          ],
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "name": "TradePerformance",
+      "display_name": "Trade Performance",
+      "description": "Temporal patterns and direction filter.",
+      "visuals": [
+        {
+          "id": "performance",
+          "title": "Imports versus Exports",
+          "visual_type": "lineChart",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Category": [
+              {
+                "kind": "Column",
+                "table": "DimDate",
+                "name": "Date"
+              }
+            ],
+            "Series": [
+              {
+                "kind": "Column",
+                "table": "FactTrade",
+                "name": "Direction"
+              }
+            ],
+            "Y": [
+              {
+                "kind": "Sum",
+                "table": "FactTrade",
+                "name": "Value"
+              }
+            ]
+          },
+          "selection_reason": "Imports vs Exports directional breakdown.",
+          "priority": "high",
+          "evidence_references": [
+            "FactTrade.Direction"
+          ],
+          "evidence": null
+        },
+        {
+          "id": "direction",
+          "title": "Trade Direction",
+          "visual_type": "slicer",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Column",
+                "table": "FactTrade",
+                "name": "Direction"
+              }
+            ]
+          },
+          "selection_reason": "Interactive slicer for directional flow.",
+          "priority": "medium",
+          "evidence_references": [
+            "FactTrade.Direction"
+          ],
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "name": "CountryAnalysis",
+      "display_name": "Country Analysis",
+      "description": "Country distribution and detail table.",
+      "visuals": [
+        {
+          "id": "countries",
+          "title": "Trade by Country",
+          "visual_type": "clusteredBarChart",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Category": [
+              {
+                "kind": "Column",
+                "table": "DimCountry",
+                "name": "Country"
+              }
+            ],
+            "Series": [
+              {
+                "kind": "Column",
+                "table": "FactTrade",
+                "name": "Direction"
+              }
+            ],
+            "Y": [
+              {
+                "kind": "Sum",
+                "table": "FactTrade",
+                "name": "Value"
+              }
+            ]
+          },
+          "selection_reason": "Country level contribution bar chart.",
+          "priority": "high",
+          "evidence_references": [
+            "DimCountry.Country"
+          ],
+          "evidence": null
+        },
+        {
+          "id": "country_detail",
+          "title": "Country Comparison",
+          "visual_type": "tableEx",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Column",
+                "table": "DimCountry",
+                "name": "Country"
+              },
+              {
+                "kind": "Column",
+                "table": "FactTrade",
+                "name": "Direction"
+              },
+              {
+                "kind": "Sum",
+                "table": "FactTrade",
+                "name": "Value"
+              }
+            ]
+          },
+          "selection_reason": "Tabular audit of country trade values.",
+          "priority": "low",
+          "evidence_references": [
+            "DimCountry.Country"
+          ],
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "name": "ProductAnalysis",
+      "display_name": "Product Analysis",
+      "description": "Product distribution and detail table.",
+      "visuals": [
+        {
+          "id": "products",
+          "title": "Trade by Product",
+          "visual_type": "clusteredBarChart",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Category": [
+              {
+                "kind": "Column",
+                "table": "DimProduct",
+                "name": "Product"
+              }
+            ],
+            "Series": [
+              {
+                "kind": "Column",
+                "table": "FactTrade",
+                "name": "Direction"
+              }
+            ],
+            "Y": [
+              {
+                "kind": "Sum",
+                "table": "FactTrade",
+                "name": "Value"
+              }
+            ]
+          },
+          "selection_reason": "Product level contribution bar chart.",
+          "priority": "high",
+          "evidence_references": [
+            "DimProduct.Product"
+          ],
+          "evidence": null
+        },
+        {
+          "id": "product_detail",
+          "title": "Product and Country Detail",
+          "visual_type": "tableEx",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Column",
+                "table": "DimProduct",
+                "name": "Product"
+              },
+              {
+                "kind": "Column",
+                "table": "DimCountry",
+                "name": "Country"
+              },
+              {
+                "kind": "Sum",
+                "table": "FactTrade",
+                "name": "Value"
+              }
+            ]
+          },
+          "selection_reason": "Cross-dimensional commodity breakdown.",
+          "priority": "low",
+          "evidence_references": [
+            "DimProduct.Product"
+          ],
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "name": "BusinessInsights",
+      "display_name": "Business Insights",
+      "description": "Upstream findings and recommendations.",
+      "visuals": [
+        {
+          "id": "insights",
+          "title": "Validated Business Insights",
+          "visual_type": "tableEx",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Column",
+                "table": "BusinessInsights",
+                "name": "Kind"
+              },
+              {
+                "kind": "Column",
+                "table": "BusinessInsights",
+                "name": "Text"
+              }
+            ]
+          },
+          "selection_reason": "Narrative table of findings and recommendations.",
+          "priority": "high",
+          "evidence_references": [
+            "synthetic-finding-1"
+          ],
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "name": "DataQualityTraceability",
+      "display_name": "Data Quality & Traceability",
+      "description": "Data quality indicators and generator diagnostics.",
+      "visuals": [
+        {
+          "id": "quality",
+          "title": "Data Quality Indicators",
+          "visual_type": "tableEx",
+          "kpi_reference": null,
+          "insight_reference": null,
+          "roles": {
+            "Values": [
+              {
+                "kind": "Column",
+                "table": "DataQuality",
+                "name": "Check"
+              },
+              {
+                "kind": "Column",
+                "table": "DataQuality",
+                "name": "Result"
+              }
+            ]
+          },
+          "selection_reason": "Quality and audit verification table.",
+          "priority": "high",
+          "evidence_references": [
+            "quality_report"
+          ],
+          "evidence": null
+        }
+      ]
+    }
+  ],
+  "kpi_references": [
+    "total_imports",
+    "total_exports",
+    "trade_balance",
+    "transaction_count"
+  ],
+  "insight_references": [
+    "synthetic-finding-1"
+  ],
+  "warnings": [],
+  "planning_mode": "deterministic",
+  "metadata": {
+    "compiler": "deterministic_baseline"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "Total Imports": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Import\")",
+  "Total Exports": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Export\")",
+  "Trade Balance": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Export\") - CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Import\")",
+  "Transaction Count": "COUNTROWS(FactTrade)"
+}

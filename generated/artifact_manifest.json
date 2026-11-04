@@ -1,0 +1,138 @@
+[
+  {
+    "path": "dashboard.html",
+    "bytes": 26616
+  },
+  {
+    "path": "dashboard_generator.pbip",
+    "bytes": 300
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\BusinessInsights\\page.json",
+    "bytes": 257
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\BusinessInsights\\visuals\\insights\\visual.json",
+    "bytes": 1832
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\CountryAnalysis\\page.json",
+    "bytes": 255
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\CountryAnalysis\\visuals\\countries\\visual.json",
+    "bytes": 2601
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\CountryAnalysis\\visuals\\country_detail\\visual.json",
+    "bytes": 2425
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\DataQualityTraceability\\page.json",
+    "bytes": 274
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\DataQualityTraceability\\visuals\\quality\\visual.json",
+    "bytes": 1816
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ExecutiveOverview\\page.json",
+    "bytes": 259
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ExecutiveOverview\\visuals\\total_exports_card\\visual.json",
+    "bytes": 1419
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ExecutiveOverview\\visuals\\total_imports_card\\visual.json",
+    "bytes": 1418
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ExecutiveOverview\\visuals\\trade_balance_card\\visual.json",
+    "bytes": 1419
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ExecutiveOverview\\visuals\\transaction_count_card\\visual.json",
+    "bytes": 1439
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ExecutiveOverview\\visuals\\trend\\visual.json",
+    "bytes": 2362
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\pages.json",
+    "bytes": 391
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ProductAnalysis\\page.json",
+    "bytes": 255
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ProductAnalysis\\visuals\\product_detail\\visual.json",
+    "bytes": 2429
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\ProductAnalysis\\visuals\\products\\visual.json",
+    "bytes": 2600
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\TradePerformance\\page.json",
+    "bytes": 257
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\TradePerformance\\visuals\\direction\\visual.json",
+    "bytes": 1401
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\pages\\TradePerformance\\visuals\\performance\\visual.json",
+    "bytes": 2586
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\report.json",
+    "bytes": 581
+  },
+  {
+    "path": "dashboard_generator.Report\\definition\\version.json",
+    "bytes": 152
+  },
+  {
+    "path": "dashboard_generator.Report\\definition.pbir",
+    "bytes": 253
+  },
+  {
+    "path": "dashboard_generator.Report\\StaticResources\\SharedResources\\BaseThemes\\CY24SU06.json",
+    "bytes": 13467
+  },
+  {
+    "path": "dashboard_generator.SemanticModel\\definition.pbism",
+    "bytes": 153
+  },
+  {
+    "path": "dashboard_generator.SemanticModel\\model.bim",
+    "bytes": 7777
+  },
+  {
+    "path": "dashboard_generator.source\\BusinessInsights.csv",
+    "bytes": 182
+  },
+  {
+    "path": "dashboard_generator.source\\DataQuality.csv",
+    "bytes": 245
+  },
+  {
+    "path": "dashboard_generator.source\\FactTrade.csv",
+    "bytes": 335
+  },
+  {
+    "path": "dax_measures.json",
+    "bytes": 394
+  },
+  {
+    "path": "kpi_catalog.generated.json",
+    "bytes": 1130
+  },
+  {
+    "path": "visual_lineage.json",
+    "bytes": 3289
+  }
+]

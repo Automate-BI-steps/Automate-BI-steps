@@ -1,0 +1,5 @@
+{
+  "source_dataset": "synthetic_test_dataset",
+  "generated_for": "dashboard_generator_test",
+  "notes": "Synthetic records created for end-to-end validation."
+}

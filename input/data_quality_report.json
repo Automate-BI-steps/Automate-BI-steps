@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "row_count": 8,
+  "issues": [],
+  "checks": {
+    "required_columns": "passed",
+    "date_parse": "passed",
+    "numeric_value": "passed",
+    "direction_domain": "passed"
+  }
+}

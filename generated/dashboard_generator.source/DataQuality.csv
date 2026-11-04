@@ -1,0 +1,8 @@
+Check,Result
+Upstream quality status,passed
+Rows loaded,8
+Upstream check: date_parse,passed
+Upstream check: direction_domain,passed
+Upstream check: numeric_value,passed
+Upstream check: required_columns,passed
+Power BI Desktop validation,NOT_RUN

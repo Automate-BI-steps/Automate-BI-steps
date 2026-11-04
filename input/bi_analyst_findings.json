@@ -1,0 +1,17 @@
+{
+  "reporting_period": "2024-2025",
+  "confidence": "synthetic_test",
+  "findings": [
+    {
+      "id": "synthetic-finding-1",
+      "text": "Exports exceed imports in the synthetic test period.",
+      "evidence": {
+        "total_exports": 5300,
+        "total_imports": 3850
+      }
+    }
+  ],
+  "recommendations": [
+    "Use country and product filters to investigate export concentration."
+  ]
+}

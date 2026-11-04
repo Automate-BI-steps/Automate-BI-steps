@@ -1,0 +1,101 @@
+[
+  {
+    "kpi_id": "total_imports",
+    "definition": "Sum of trade value for import transactions",
+    "source_dataset": "cleaned_trade",
+    "source_columns": [
+      "value",
+      "direction"
+    ],
+    "semantic_model": {
+      "table": "FactTrade",
+      "measure": "Total Imports",
+      "dax": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Import\")"
+    },
+    "logic": "SUM(value) where direction=Import",
+    "report_pages": [
+      "ExecutiveOverview"
+    ],
+    "report_visuals": [
+      "total_imports_card",
+      "trend"
+    ],
+    "lineage_scope": "KPI-to-page and generated visual references; source transformation lineage is limited to the documented input mapping",
+    "upstream_agent": "not_provided",
+    "validation_status": "python_validated",
+    "unresolved_issues": []
+  },
+  {
+    "kpi_id": "total_exports",
+    "definition": "Sum of trade value for export transactions",
+    "source_dataset": "cleaned_trade",
+    "source_columns": [
+      "value",
+      "direction"
+    ],
+    "semantic_model": {
+      "table": "FactTrade",
+      "measure": "Total Exports",
+      "dax": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Export\")"
+    },
+    "logic": "SUM(value) where direction=Export",
+    "report_pages": [
+      "ExecutiveOverview"
+    ],
+    "report_visuals": [
+      "total_exports_card",
+      "trend"
+    ],
+    "lineage_scope": "KPI-to-page and generated visual references; source transformation lineage is limited to the documented input mapping",
+    "upstream_agent": "not_provided",
+    "validation_status": "python_validated",
+    "unresolved_issues": []
+  },
+  {
+    "kpi_id": "trade_balance",
+    "definition": "Total exports minus total imports",
+    "source_dataset": "cleaned_trade",
+    "source_columns": [
+      "value",
+      "direction"
+    ],
+    "semantic_model": {
+      "table": "FactTrade",
+      "measure": "Trade Balance",
+      "dax": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Export\") - CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Import\")"
+    },
+    "logic": "[Total Exports] - [Total Imports]",
+    "report_pages": [
+      "ExecutiveOverview"
+    ],
+    "report_visuals": [
+      "trade_balance_card"
+    ],
+    "lineage_scope": "KPI-to-page and generated visual references; source transformation lineage is limited to the documented input mapping",
+    "upstream_agent": "not_provided",
+    "validation_status": "python_validated",
+    "unresolved_issues": []
+  },
+  {
+    "kpi_id": "transaction_count",
+    "definition": "Number of trade transactions",
+    "source_dataset": "cleaned_trade",
+    "source_columns": [],
+    "semantic_model": {
+      "table": "FactTrade",
+      "measure": "Transaction Count",
+      "dax": "COUNTROWS(FactTrade)"
+    },
+    "logic": "COUNTROWS(FactTrade)",
+    "report_pages": [
+      "ExecutiveOverview"
+    ],
+    "report_visuals": [
+      "transaction_count_card"
+    ],
+    "lineage_scope": "KPI-to-page and generated visual references; source transformation lineage is limited to the documented input mapping",
+    "upstream_agent": "not_provided",
+    "validation_status": "python_validated",
+    "unresolved_issues": []
+  }
+]

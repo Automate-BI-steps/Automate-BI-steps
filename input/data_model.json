@@ -1,0 +1,13 @@
+{
+  "fact_table": "FactTrade",
+  "grain": "One row per trade transaction",
+  "columns": {
+    "date": "Trade transaction date",
+    "country": "Partner country code",
+    "product": "Product category",
+    "direction": "Import or Export",
+    "value": "Trade value in source currency"
+  },
+  "validated": true,
+  "source": "synthetic_test_dataset"
+}

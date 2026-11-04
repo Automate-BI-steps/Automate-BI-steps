@@ -1,0 +1,165 @@
+{
+  "agent_name": "dashboard_generator",
+  "run_id": "90338dba-3799-34d8-19bc-c3a28b7b631e",
+  "generated_at": "2026-11-04T20:36:25.925725+00:00",
+  "status": "PARTIAL_SUCCESS",
+  "planning_mode": "deterministic",
+  "project_format": "PBIP",
+  "project_path": "generated\\dashboard_generator.pbip",
+  "html_dashboard_path": "dashboard.html",
+  "report_pages": [
+    "Executive Overview",
+    "Trade Performance",
+    "Country Analysis",
+    "Product Analysis",
+    "Business Insights",
+    "Data Quality & Traceability"
+  ],
+  "semantic_model": {
+    "fact_table": "FactTrade",
+    "dimensions": [
+      "DimDate",
+      "DimCountry",
+      "DimProduct"
+    ],
+    "support_tables": [
+      "BusinessInsights",
+      "DataQuality"
+    ],
+    "measures": [
+      "Total Imports",
+      "Total Exports",
+      "Trade Balance",
+      "Transaction Count"
+    ],
+    "source_folder_parameter": "SourceFolder"
+  },
+  "visual_lineage": [
+    {
+      "kpi_id": "total_imports",
+      "definition": "Sum of trade value for import transactions",
+      "source_dataset": "cleaned_trade",
+      "source_columns": [
+        "value",
+        "direction"
+      ],
+      "semantic_model": {
+        "table": "FactTrade",
+        "measure": "Total Imports",
+        "dax": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Import\")"
+      },
+      "logic": "SUM(value) where direction=Import",
+      "report_pages": [
+        "ExecutiveOverview"
+      ],
+      "report_visuals": [
+        "total_imports_card",
+        "trend"
+      ],
+      "lineage_scope": "KPI-to-page and generated visual references; source transformation lineage is limited to the documented input mapping",
+      "upstream_agent": "not_provided",
+      "validation_status": "python_validated",
+      "unresolved_issues": []
+    },
+    {
+      "kpi_id": "total_exports",
+      "definition": "Sum of trade value for export transactions",
+      "source_dataset": "cleaned_trade",
+      "source_columns": [
+        "value",
+        "direction"
+      ],
+      "semantic_model": {
+        "table": "FactTrade",
+        "measure": "Total Exports",
+        "dax": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Export\")"
+      },
+      "logic": "SUM(value) where direction=Export",
+      "report_pages": [
+        "ExecutiveOverview"
+      ],
+      "report_visuals": [
+        "total_exports_card",
+        "trend"
+      ],
+      "lineage_scope": "KPI-to-page and generated visual references; source transformation lineage is limited to the documented input mapping",
+      "upstream_agent": "not_provided",
+      "validation_status": "python_validated",
+      "unresolved_issues": []
+    },
+    {
+      "kpi_id": "trade_balance",
+      "definition": "Total exports minus total imports",
+      "source_dataset": "cleaned_trade",
+      "source_columns": [
+        "value",
+        "direction"
+      ],
+      "semantic_model": {
+        "table": "FactTrade",
+        "measure": "Trade Balance",
+        "dax": "CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Export\") - CALCULATE(SUM(FactTrade[Value]), FactTrade[Direction] = \"Import\")"
+      },
+      "logic": "[Total Exports] - [Total Imports]",
+      "report_pages": [
+        "ExecutiveOverview"
+      ],
+      "report_visuals": [
+        "trade_balance_card"
+      ],
+      "lineage_scope": "KPI-to-page and generated visual references; source transformation lineage is limited to the documented input mapping",
+      "upstream_agent": "not_provided",
+      "validation_status": "python_validated",
+      "unresolved_issues": []
+    },
+    {
+      "kpi_id": "transaction_count",
+      "definition": "Number of trade transactions",
+      "source_dataset": "cleaned_trade",
+      "source_columns": [],
+      "semantic_model": {
+        "table": "FactTrade",
+        "measure": "Transaction Count",
+        "dax": "COUNTROWS(FactTrade)"
+      },
+      "logic": "COUNTROWS(FactTrade)",
+      "report_pages": [
+        "ExecutiveOverview"
+      ],
+      "report_visuals": [
+        "transaction_count_card"
+      ],
+      "lineage_scope": "KPI-to-page and generated visual references; source transformation lineage is limited to the documented input mapping",
+      "upstream_agent": "not_provided",
+      "validation_status": "python_validated",
+      "unresolved_issues": []
+    }
+  ],
+  "not_visualised": [],
+  "warnings": [
+    "Power BI Desktop opening, refresh, DAX evaluation, and rendering were not executed by Python."
+  ],
+  "errors": [],
+  "validation_issues": [],
+  "demo_mode": false,
+  "source_mapping": {
+    "date": "date",
+    "country": "country",
+    "product": "product",
+    "direction": "direction",
+    "value": "value"
+  },
+  "expected_kpi_values": {
+    "total_imports": 3850.0,
+    "total_exports": 5300.0,
+    "trade_balance": 1450.0,
+    "transaction_count": 8.0
+  },
+  "desktop_validation": {
+    "available": true,
+    "status": "NOT_RUN",
+    "reason": "Desktop integration is an external test and was not executed by the generator."
+  },
+  "dashboard_plan": null,
+  "critic_report": null
+}
