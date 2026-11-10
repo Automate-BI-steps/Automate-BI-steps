@@ -18,7 +18,7 @@ from app.reasoning.fact_prompts import (
 class FactReasoner:
     """LLM-based fact-table reasoning engine.
 
-    Gemma on Ollama Cloud selects the fact table.
+    The LLM (Groq, gpt-oss) selects the fact table.
     Python only validates the returned result and its arithmetic.
     """
 
@@ -31,8 +31,8 @@ class FactReasoner:
 
     def __init__(
         self,
-        model: str = "gemma4:31b-cloud",
-        base_url: str = "https://ollama.com/v1",
+        model: str = "openai/gpt-oss-120b",
+        base_url: str = "https://api.groq.com/openai/v1",
         timeout: int = 120,
     ):
         self.model = model
@@ -50,7 +50,7 @@ class FactReasoner:
 
         user_prompt = build_fact_user_prompt(candidates)
 
-        response = self._call_ollama(
+        response = self._call_llm(
             system_prompt=SYSTEM_PROMPT,
             user_prompt=user_prompt,
             candidates=candidates,
@@ -73,16 +73,16 @@ class FactReasoner:
         )
 
     
-    def _call_ollama(
+    def _call_llm(
         self,
         system_prompt: str,
         user_prompt: str,
         candidates: List[FactCandidateInput],
     ) -> str:
-        api_key = os.getenv("OLLAMA_API_KEY")
+        api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise RuntimeError(
-                "OLLAMA_API_KEY is not set. Configure your Ollama Cloud API key."
+                "GROQ_API_KEY is not set. Configure your Groq API key."
             )
 
         url = f"{self.base_url}/chat/completions"
@@ -110,6 +110,8 @@ class FactReasoner:
             "temperature": 0,
             "max_tokens": 1000,
             "response_format": {"type": "json_object"},
+            # modèles gpt-oss (Groq) : le raisonnement compte dans max_tokens, on le garde court
+            **({"reasoning_effort": "low"} if str(self.model).startswith("openai/gpt-oss") else {}),
         }
 
         try:
@@ -121,12 +123,12 @@ class FactReasoner:
             )
         except requests.RequestException as exc:
             raise RuntimeError(
-                f"Unable to connect to Ollama at {url}: {exc}"
+                f"Unable to connect to the LLM server at {url}: {exc}"
             ) from exc
 
         if response.status_code != 200:
             raise RuntimeError(
-                "Ollama returned an error.\n"
+                "LLM returned an error.\n"
                 f"HTTP status: {response.status_code}\n"
                 f"Response: {response.text}"
             )
@@ -135,27 +137,27 @@ class FactReasoner:
             data = response.json()
         except ValueError as exc:
             raise RuntimeError(
-                "Ollama returned invalid JSON."
+                "LLM returned invalid JSON."
             ) from exc
 
         choices = data.get("choices")
         if not isinstance(choices, list) or not choices:
             raise RuntimeError(
-                "Ollama Cloud response contains no choices."
+                "LLM response contains no choices."
             )
 
         message = choices[0].get("message", {})
 
         if not isinstance(message, dict):
             raise RuntimeError(
-                "Ollama response does not contain a valid message object."
+                "LLM response does not contain a valid message object."
             )
 
         content = message.get("content")
 
         if not isinstance(content, str) or not content.strip():
             raise RuntimeError(
-                "Ollama response does not contain text content."
+                "LLM response does not contain text content."
             )
 
         return content.strip()
@@ -167,13 +169,13 @@ class FactReasoner:
             data = json.loads(response)
         except json.JSONDecodeError as exc:
             raise ValueError(
-                "Ollama Cloud returned invalid JSON.\n"
+                "LLM returned invalid JSON.\n"
                 f"Raw response:\n{response}"
             ) from exc
 
         if not isinstance(data, dict):
             raise ValueError(
-                "Ollama Cloud response must be a JSON object."
+                "LLM response must be a JSON object."
             )
 
         return data
@@ -193,7 +195,7 @@ class FactReasoner:
 
         if actual_keys != expected_keys:
             raise ValueError(
-                "Ollama Cloud response does not match the required contract. "
+                "LLM response does not match the required contract. "
                 f"Expected fields: {sorted(expected_keys)}. "
                 f"Received fields: {sorted(actual_keys)}."
             )
@@ -207,7 +209,7 @@ class FactReasoner:
 
         if selected_fact not in candidate_names:
             raise ValueError(
-                "Ollama Cloud selected a table that does not exist among the "
+                "LLM selected a table that does not exist among the "
                 f"candidates: {selected_fact}"
             )
 
@@ -243,7 +245,7 @@ class FactReasoner:
 
         if len(reasoning) == 0:
             raise ValueError(
-                "Ollama Cloud must provide at least one reasoning statement."
+                "LLM must provide at least one reasoning statement."
             )
 
         if not all(isinstance(item, str) for item in reasoning):
@@ -284,11 +286,11 @@ class FactReasoner:
 
 
 def fact_reasoning_node(state: dict) -> dict:
-    """Use Ollama Cloud to select the fact table; Python validates the contract."""
+    """Use the LLM to select the fact table; Python validates the contract."""
     try:
         reasoner = FactReasoner(
-            model=state.get("reasoning_model", "gemma4:31b-cloud"),
-            base_url=state.get("ollama_base_url", "https://ollama.com/v1"),
+            model=state.get("reasoning_model", "openai/gpt-oss-120b"),
+            base_url=state.get("llm_base_url", "https://api.groq.com/openai/v1"),
             timeout=state.get("reasoning_timeout", 120),
         )
         decision = reasoner.reason(state["fact_candidates"])

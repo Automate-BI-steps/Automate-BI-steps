@@ -12,7 +12,11 @@ Usage :
         [--use-llm]
 
 Écrit une ligne JSON sur stdout : {"ok": bool, "semantic_mapping": ..., "kpi_results": ...,
-"kpi_checks": ..., "kpi_analysis": ..., "outputs": ..., "errors": [...]}
+"kpi_checks": ..., "kpi_analysis": ..., "outputs": ..., "fact_table": <chemin du CSV>, "errors": [...]}
+
+La table de faits à plat sur laquelle les KPI ont été calculés (`fact_trade` de l'agent) est aussi
+écrite telle quelle dans <output-dir>/fact_trade.csv : l'agent Dashboard (Agent 5) et l'Auditor
+(Agent 6) en ont besoin, et c'est la seule table qui correspond exactement aux valeurs publiées.
 """
 from __future__ import annotations
 
@@ -43,6 +47,12 @@ def main() -> int:
         from agent import en_json, run
 
         etat = run(args.data_path)
+        fact_path = None
+        if etat.get("fact_trade") is not None:  # table de faits à plat de l'agent, exportée telle quelle
+            out_dir = Path(args.output_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            fact_path = out_dir / "fact_trade.csv"
+            etat["fact_trade"].to_csv(fact_path, index=False, encoding="utf-8")
         out = en_json({
             "ok": not etat.get("errors"),
             "semantic_mapping": etat.get("semantic_mapping"),
@@ -53,6 +63,7 @@ def main() -> int:
             "kpi_summary": etat.get("kpi_summary"),
             "audit_log": etat.get("audit_log"),
             "outputs": etat.get("outputs"),
+            "fact_table": str(fact_path) if fact_path else None,
             "errors": etat.get("errors"),
         })
         print(json.dumps(out, ensure_ascii=False, default=str))

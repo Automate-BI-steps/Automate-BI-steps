@@ -18,7 +18,17 @@ ROLES = {
     "country":       ("Pays",                          ["country", "pays", "partner", "partenaire"]),
     "product":       ("Produit",                       ["product", "produit", "commodity", "hs_code"]),
     "value":         ("Montant de la ligne (numérique)", ["linetotal", "revenue", "sales", "value", "valeur", "amount", "montant", "total"]),
+    # Rôles complémentaires (KPI clients, catégories, employés, transport, remises, volumes).
+    "customer":      ("Client (nom ou identifiant)",   ["customer", "client", "company", "societe", "société"]),
+    "category":      ("Catégorie de produit",          ["category", "categorie", "catégorie", "famille", "family"]),
+    "employee":      ("Employé / vendeur",             ["employee", "employe", "employé", "salesperson", "vendeur", "seller"]),
+    "shipper":       ("Transporteur",                  ["shipper", "carrier", "transporteur"]),
+    "quantity":      ("Quantité (numérique)",          ["quantity", "quantite", "quantité", "qty", "units"]),
+    "unit_price":    ("Prix unitaire (numérique)",     ["unitprice", "unit_price", "prix_unitaire", "price", "prix"]),
+    "discount":      ("Remise (taux, numérique)",      ["discount", "remise"]),
+    "freight":       ("Frais de port de la commande",  ["freight", "fret", "shipping_cost", "port"]),
 }
+NUMERIQUES = {"value", "quantity", "unit_price", "discount", "freight"}
 FLUX_CONNUS = {"import", "export", "imports", "exports", "imp", "exp"}
 
 
@@ -36,7 +46,7 @@ def mapping_par_mots_cles(df: pd.DataFrame) -> dict:
     for role, (_, mots) in ROLES.items():
         meilleur, meilleur_score = None, 0
         for col in df.columns:
-            if col in deja_pris or (role == "value" and not est_numerique(df[col])):
+            if col in deja_pris or (role in NUMERIQUES and not est_numerique(df[col])):
                 continue
             score = sum(mot in str(col).lower() for mot in mots)
             if role == "flow" and ressemble_a_un_flux(df[col]):
@@ -50,12 +60,12 @@ def mapping_par_mots_cles(df: pd.DataFrame) -> dict:
 
 
 def mapping_par_llm(df: pd.DataFrame) -> dict:
-    from langchain_ollama import ChatOllama          # importé ici : le LLM est optionnel
+    from llm_client import make_llm                  # Groq, clé de l'Agent 4 : voir llm_client.py
     from pydantic import Field, create_model
     Modele = create_model("Mapping", **{r: (Optional[str], Field(None, description=d))
                                         for r, (d, _) in ROLES.items()})
     colonnes = "\n".join(f"- {c} ex: {df[c].dropna().astype(str).head(3).tolist()}" for c in df.columns)
-    llm = ChatOllama(model="llama3.1", temperature=0).with_structured_output(Modele)
+    llm = make_llm().with_structured_output(Modele)
     return llm.invoke("Associe chaque rôle à UNE colonne (nom exact) ou null. "
                       "N'invente aucune colonne.\n" + colonnes).model_dump()
 
@@ -68,7 +78,7 @@ def map_columns(df: pd.DataFrame, use_llm: bool = False):
         try:
             for role, col in mapping_par_llm(df).items():
                 valide = col in df.columns and col not in mapping.values()
-                if valide and (role != "value" or est_numerique(df[col])):
+                if valide and (role not in NUMERIQUES or est_numerique(df[col])):
                     mapping[role], sources[role] = col, "LLM"
             methode = "LLM + vérification"
         except Exception:

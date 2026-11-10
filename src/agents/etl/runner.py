@@ -8,7 +8,7 @@ code. L'isolation en sous-processus (comme src/orchestrator.py pour les autres a
 Usage :
     python -m src.agents.etl.runner --input-dir <dossier CSV> --output-dir <dossier de sortie>
         [--primary-keys-json '{"orders": ["orderID"], ...}']
-        [--reasoning-model gemma4:31b-cloud] [--ollama-base-url https://ollama.com/v1]
+        [--reasoning-model openai/gpt-oss-120b] [--llm-base-url https://api.groq.com/openai/v1]
         [--reasoning-timeout 120]
 
 Écrit une ligne JSON sur stdout : {"ok": bool, "plan": ..., "validation": ...,
@@ -41,7 +41,7 @@ def invoke_with_retry(invoke, initial_state: dict, max_attempts: int = 3) -> tup
         if not error:
             break
         errors.append(error)
-        if "OLLAMA_API_KEY is not set" in error:
+        if "GROQ_API_KEY is not set" in error:
             break
     return result, errors
 
@@ -51,8 +51,8 @@ def main() -> int:
     parser.add_argument("--input-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--primary-keys-json", default=None)
-    parser.add_argument("--reasoning-model", default="gemma4:31b-cloud")
-    parser.add_argument("--ollama-base-url", default="https://ollama.com/v1")
+    parser.add_argument("--reasoning-model", default="openai/gpt-oss-120b")
+    parser.add_argument("--llm-base-url", default="https://api.groq.com/openai/v1")
     parser.add_argument("--reasoning-timeout", type=int, default=120)
     parser.add_argument("--max-attempts", type=int, default=3)
     args = parser.parse_args()
@@ -68,7 +68,7 @@ def main() -> int:
             "input_dir": args.input_dir,
             "primary_keys": primary_keys,
             "reasoning_model": args.reasoning_model,
-            "ollama_base_url": args.ollama_base_url,
+            "llm_base_url": args.llm_base_url,
             "reasoning_timeout": args.reasoning_timeout,
         }
 

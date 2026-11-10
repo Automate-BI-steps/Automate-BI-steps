@@ -86,8 +86,9 @@ class ETLSection(TypedDict, total=False):
     input_dir: str
     confirmed_fact: str | None
     selected_dimensions: list[str]
-    ollama_reasoning_used: bool  # False : repli déterministe (pas de clé OLLAMA_API_KEY ou réseau indisponible)
+    llm_reasoning_used: bool  # False : le raisonnement LLM (Groq) n'a pas abouti (pas de clé GROQ_API_KEY_AGENT3 ou réseau indisponible)
     fact_reasoning_error: str | None
+    fact_reasoning_attempts: int | None  # essais du raisonnement LLM (1 = pas de nouvel essai)
     dimension_selection_error: str | None
     plan: dict[str, Any] | None  # StarSchemaPlan.to_dict() : grain, tables, colonnes, jointures
     validation: dict[str, Any]
@@ -103,7 +104,8 @@ class BIState(TypedDict, total=False):
     etl: Annotated[ETLSection, merge_section]
     kpi: Annotated[dict[str, Any], merge_section]
     modeling: Annotated[dict[str, Any], merge_section]
-    dashboard: Annotated[dict[str, Any], merge_section]
+    dashboard: Annotated[dict[str, Any], merge_section]  # Agent 5 (src/agents/dashboard/step.py)
+    auditor: Annotated[dict[str, Any], merge_section]  # Agent 6 (src/agents/auditor/step.py)
     errors: Annotated[list[dict[str, Any]], operator.add]
     timeline: Annotated[list[dict[str, Any]], operator.add]
     # Optionnel : historique pour les agents conversationnels / ReAct.

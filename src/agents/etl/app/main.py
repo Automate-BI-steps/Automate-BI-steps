@@ -506,10 +506,9 @@ def main() -> None:
     initial_state = {
         "input_dir": "data/input",
         "primary_keys": DEFAULT_PRIMARY_KEYS,
-        # Ollama Cloud model. The reasoning clients must use an
-        # OpenAI-compatible client for this remote base URL.
-        "reasoning_model": "gemma4:31b-cloud",
-        "ollama_base_url": "https://ollama.com/v1",
+        # Groq model (OpenAI-compatible API); the key comes from GROQ_API_KEY.
+        "reasoning_model": "openai/gpt-oss-120b",
+        "llm_base_url": "https://api.groq.com/openai/v1",
         "reasoning_timeout": 120,
     }
 

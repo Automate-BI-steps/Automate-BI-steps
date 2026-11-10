@@ -1,7 +1,9 @@
-"""Backend web BI Flow (FastAPI) : profilage (Agent 1) -> nettoyage (Agent 2) -> contrôle, pour l'interface React.
+"""Backend web BI Flow (FastAPI) : profilage (Agent 1) -> nettoyage (Agent 2) -> contrôle -> ETL (Agent 3) -> KPI (Agent 4)
+-> tableau de bord (Agent 5) -> audit XAI (Agent 6), pour l'interface React.
 
 Lancement (depuis la racine du dépôt) :
-    uvicorn api.app:app --reload          puis ouvrir http://127.0.0.1:8000  (interface compilée dans client/dist)
+    python serve.py                       puis ouvrir http://127.0.0.1:8000  (interface compilée dans client/dist)
+    python serve.py --reload              développement : ne recharge que si api/ ou src/ change (voir serve.py)
     cd client && npm run dev              interface en développement sur http://127.0.0.1:5173
 
 Chaque étape est une commande de src/orchestrator.py lancée dans un sous-processus : les agents tournent
@@ -30,6 +32,8 @@ from fastapi.staticfiles import StaticFiles
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from src.agents.cleaning import llm_planner  # noqa: E402
+from src import llm_keys  # noqa: E402
+from src.agents.auditor import core as auditor_core  # noqa: E402
 
 RUNS_DIR = Path(os.environ.get("RUNS_DIR") or ROOT / "outputs" / "runs").resolve()
 CLIENT_DIST = ROOT / "client" / "dist"
@@ -39,9 +43,11 @@ MAX_FILES = 20
 RUN_ID = re.compile(r"^run_\d{8}T\d{6}_[0-9a-f]{6}$")
 CHOICES = {"empty", "cap", "keep", "advice"}  # vider, ramener à la limite, garder, suivre le conseil
 
-app = FastAPI(title="BI Flow - Profilage et nettoyage", version="3.0")
+app = FastAPI(title="BI Flow", version="4.0")
 LIVE: dict[str, dict] = {}  # avancement des runs en cours (le reste est dans state.json)
 LOCK = threading.Lock()
+AUDITORS: dict[str, tuple[float, object]] = {}  # questions à l'Auditor : un Auditor préparé par run, relu si l'audit a été refait
+ASK_LOCK = threading.Lock()
 
 
 # --------------------------------------------------------------------------- utilitaires
@@ -67,7 +73,7 @@ def artifact(path: str | None) -> Path | None:
     if not path:
         return None
     p = Path(path).resolve()
-    return p if p.is_file() and p.is_relative_to(ROOT) else None
+    return p if p.is_file() and (p.is_relative_to(ROOT) or p.is_relative_to(RUNS_DIR)) else None
 
 
 def live_info(run_id: str) -> dict:
@@ -95,7 +101,7 @@ def step(run_id: str, command: str, args: list[str], env: dict[str, str]) -> dic
 def chain(run_id: str, steps: list[tuple]) -> None:
     """Chaque étape : (commande, args, env) ou (commande, args, env, best_effort=True) pour une
     étape qui ne doit pas bloquer la suite si elle échoue (etl et kpi ne dépendent pas l'un de
-    l'autre, voir src/graph.py)."""
+    l'autre, voir src/graph.py ; le dashboard et l'audit travaillent sur ce qui existe)."""
     try:
         for command, args, env, *rest in steps:
             best_effort = rest[0] if rest else False
@@ -125,18 +131,23 @@ def launch(run_id: str, steps: list) -> bool:
 def config():
     llm_planner.load_env()
     return {"allowed_extensions": sorted(ALLOWED), "max_file_mb": MAX_FILE_MB, "max_files": MAX_FILES,
-            "groq_key_configured": bool(os.environ.get("GROQ_API_KEY")),
+            "groq_key_configured": bool(llm_keys.agent_key(2)),  # clé de l'Agent 2 : la sienne ou la clé partagée
             "default_model": os.environ.get("GROQ_MODEL") or llm_planner.PREFERRED_MODELS[0],
             "models": llm_planner.PREFERRED_MODELS,
-            "ollama_key_configured": bool(os.environ.get("OLLAMA_API_KEY"))}
+            "default_planner": "llm" if llm_keys.llm_enabled(2) else "rules",
+            "llm_enabled": llm_keys.llm_allowed(),
+            "llm_agents": llm_keys.status(),  # une clé par agent (jamais la clé elle-même)
+            "auditor_llm": auditor_core.resolve_provider(os.environ.get("AUDITOR_LLM_PROVIDER"))}
 
 
 @app.post("/api/runs")
-async def create_run(files: list[UploadFile] = File(...), planner: str = Form("rules"), model: str = Form(""),
-                     context: str = Form(""), impute: bool = Form(False), groq_api_key: str = Form(""),
-                     ollama_api_key: str = Form("")):
-    if planner not in {"llm", "rules"}:
-        raise HTTPException(400, "planner doit valoir 'llm' ou 'rules'")
+async def create_run(files: list[UploadFile] = File(...), planner: str = Form("auto"), model: str = Form(""),
+                     context: str = Form(""), impute: bool = Form(False), groq_api_key: str = Form("")):
+    if planner not in {"llm", "rules", "auto"}:
+        raise HTTPException(400, "planner doit valoir 'auto', 'llm' ou 'rules'")
+    llm_planner.load_env()
+    if planner == "auto":  # le LLM dès que l'Agent 2 a une clé (celle de l'interface comprise), sinon les règles
+        planner = "llm" if llm_keys.llm_allowed() and (groq_api_key.strip() or llm_keys.agent_key(2)) else "rules"
     if not files or len(files) > MAX_FILES:
         raise HTTPException(400, f"Déposez entre 1 et {MAX_FILES} fichiers")
     if model and model not in llm_planner.PREFERRED_MODELS:
@@ -161,9 +172,10 @@ async def create_run(files: list[UploadFile] = File(...), planner: str = Form("r
         + (["--impute"] if impute else [])
     # les clés saisies dans l'interface ne servent qu'aux sous-processus de ce run : elles ne sont écrites nulle part
     key_env = {"GROQ_API_KEY": groq_api_key.strip()} if planner == "llm" and groq_api_key.strip() else {}
-    ollama_env = {"OLLAMA_API_KEY": ollama_api_key.strip()} if ollama_api_key.strip() else {}
+    # clé de l'interface : repli pour les agents 3, 4 et 6 qui n'ont pas de clé propre (GROQ_API_KEY_AGENTn l'emporte, voir src/llm_keys.py)
+    auditor_env = {"GROQ_API_KEY": groq_api_key.strip()} if groq_api_key.strip() else {}
     launch(run_id, [("init", init, {}), ("profile", [], key_env), ("clean", [], key_env), ("verify", [], {}),
-                    ("etl", [], ollama_env, True), ("kpi", [], {}, True)])
+                    ("etl", [], auditor_env, True), ("kpi", [], auditor_env, True), ("dashboard", [], {}, True), ("auditor", [], auditor_env, True)])
     return {"run_id": run_id}
 
 
@@ -200,7 +212,7 @@ def answer_run(run_id: str, payload: dict = Body(...)):
     if not isinstance(answers, dict) or any(k not in ids or v not in CHOICES for k, v in answers.items()):
         raise HTTPException(400, "Chaque réponse doit valoir 'empty', 'cap', 'keep' ou 'advice'")
     if not launch(run_id, [("answer", ["--answers", json.dumps(answers)], {}), ("verify", [], {}),
-                           ("etl", [], {}, True), ("kpi", [], {}, True)]):
+                           ("etl", [], {}, True), ("kpi", [], {}, True), ("dashboard", [], {}, True), ("auditor", [], {}, True)]):
         raise HTTPException(409, "Une étape est déjà en cours")
     return {"ok": True}
 
@@ -219,6 +231,13 @@ FILES = {
     "profiling.md": (("profiling", "markdown_report"), "text/markdown"),
     "profiling.json": (("profiling", "json_report"), "application/json"),
     "trace.md": (("cleaning", "trace_md"), "text/markdown"),
+    "rapport_audit.pdf": (("auditor", "report_pdf"), "application/pdf"),
+    "xai_report.md": (("auditor", "xai_report"), "text/markdown"),  # seulement si le PDF n'a pas pu être produit
+    "audit_trail.csv": (("auditor", "audit_trail"), "text/csv"),
+    "lineage.csv": (("auditor", "lineage"), "text/csv"),
+    "reconciliation.csv": (("auditor", "reconciliation"), "text/csv"),
+    "xai_explanations.csv": (("auditor", "xai_explanations"), "text/csv"),
+    "human_review_queue.csv": (("auditor", "human_review_queue"), "text/csv"),
 }
 
 
@@ -230,8 +249,45 @@ def get_file(run_id: str, name: str):
     p = artifact((read_state(run_id) or {}).get(section, {}).get("artifacts", {}).get(key))
     if not p:
         raise HTTPException(404, "Fichier pas encore produit")
+    if media == "application/pdf":  # rapport final de l'Agent 6 : téléchargé, pas affiché
+        return FileResponse(p, media_type=media, filename=f"rapport_audit_{run_id}.pdf")
     text = p.read_text(encoding="utf-8")
     return HTMLResponse(text) if media == "text/html" else PlainTextResponse(text, media_type=f"{media}; charset=utf-8")
+
+
+@app.get("/api/runs/{run_id}/dashboard.zip")
+def download_dashboard(run_id: str):
+    """Projet Power BI (PBIP) généré par l'Agent 5, à ouvrir dans Power BI Desktop."""
+    p = artifact(((read_state(run_id) or {}).get("dashboard", {}).get("artifacts") or {}).get("project_zip"))
+    if not p:
+        raise HTTPException(404, "Projet Power BI pas encore produit")
+    return FileResponse(p, media_type="application/zip", filename=f"dashboard_{run_id}.zip")
+
+
+@app.post("/api/runs/{run_id}/auditor/ask")
+def ask_auditor(run_id: str, payload: dict = Body(...)):
+    """Question libre (« Pourquoi ... ? ») à l'Auditor : réponse construite à partir des preuves du run, avec contrôle des ids cités."""
+    question = str(payload.get("question") or "").strip()[:500]
+    if len(question) < 3:
+        raise HTTPException(400, "Posez une question")
+    folder = run_dir(run_id) / "auditor"
+    marker = folder / "reconciliation.csv"  # écrit à la fin de chaque audit
+    if not marker.is_file():
+        raise HTTPException(409, "L'audit de ce run n'est pas terminé")
+    from src.agents.auditor.adapter import PipelineAuditor
+    with ASK_LOCK:
+        stamp = marker.stat().st_mtime
+        hit = AUDITORS.get(run_id)
+        if hit and hit[0] == stamp:
+            aud = hit[1]
+        else:
+            aud = PipelineAuditor(folder, log=lambda _m: None).prepare()
+            AUDITORS[run_id] = (stamp, aud)
+            while len(AUDITORS) > 4:
+                AUDITORS.pop(next(iter(AUDITORS)))
+        answer, check = aud.ask(question)
+    return {"answer": answer, "status": check["status"], "verified": check["ok"], "cited": check["cited"],
+            "model": aud.llm.name if aud.llm else "template-fallback"}
 
 
 @app.get("/api/runs/{run_id}/state.json")
@@ -244,7 +300,7 @@ def download_state(run_id: str):
 
 @app.get("/api/runs/{run_id}/download")
 def download(run_id: str):
-    """ZIP : tables nettoyées, rapport de profilage, comparaison avant / après, trace et state."""
+    """ZIP : tables nettoyées, rapport de profilage, comparaison avant / après, trace, projet Power BI, rapport d'audit PDF et state."""
     state = read_state(run_id) or {}
     clean = state.get("cleaning", {}).get("clean_data_dir")
     if not clean or not Path(clean).is_dir():
@@ -255,7 +311,10 @@ def download(run_id: str):
         for p in sorted(Path(clean).glob("*.csv")):
             z.write(p, f"tables_nettoyees/{p.name}")
         for path, name in [(prof_a.get("json_report"), "profiling_report.json"), (prof_a.get("markdown_report"), "profiling_report.md"),
-                           (clean_a.get("report_html"), "comparaison.html"), (clean_a.get("trace_md"), "trace_nettoyage.md")]:
+                           (clean_a.get("report_html"), "comparaison.html"), (clean_a.get("trace_md"), "trace_nettoyage.md"),
+                           (state.get("dashboard", {}).get("artifacts", {}).get("project_zip"), "power_bi_dashboard.zip"),
+                           (state.get("auditor", {}).get("artifacts", {}).get("report_pdf"), "rapport_audit.pdf"),
+                           (state.get("auditor", {}).get("artifacts", {}).get("xai_report"), "audit_xai.md")]:
             if p := artifact(path):
                 z.write(p, name)
         z.write(run_dir(run_id) / "state.json", "state.json")

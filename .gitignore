@@ -21,6 +21,12 @@ outputs/runs/
 outputs/cleaning/
 outputs/verification/
 
+# Sorties du générateur de tableau de bord lancé hors d'un run (journal de retours)
+generated/
+
 # Interface React
 client/node_modules/
 client/dist/
+.env
+.venv/
+__pycache__/

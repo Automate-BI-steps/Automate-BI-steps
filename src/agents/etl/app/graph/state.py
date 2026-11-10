@@ -13,7 +13,7 @@ class BiFlowState(TypedDict, total=False):
     confirmed_fact: str
     fact_reasoning_error: str | None
     reasoning_timeout: int
-    ollama_base_url: str
+    llm_base_url: str
     reasoning_model: str
     tables_data: dict[str, pd.DataFrame]
     table_names: list[str]

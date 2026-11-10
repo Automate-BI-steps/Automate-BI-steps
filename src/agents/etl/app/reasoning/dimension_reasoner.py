@@ -22,8 +22,8 @@ class DimensionReasoner:
 
     def __init__(
         self,
-        model: str = "gemma4:31b-cloud",
-        base_url: str = "https://ollama.com/v1",
+        model: str = "openai/gpt-oss-120b",
+        base_url: str = "https://api.groq.com/openai/v1",
         timeout: int = 120,
         num_predict: int = 2500,
         api_key: str | None = None,
@@ -32,7 +32,7 @@ class DimensionReasoner:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.num_predict = num_predict
-        self.api_key = api_key or os.getenv("OLLAMA_API_KEY")
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
 
     def reason(
         self,
@@ -86,7 +86,7 @@ class DimensionReasoner:
         # The cloud endpoint may return valid JSON with an incorrect shape.
         # Retry once with the exact validation error and the previous response.
         # This repairs formatting only; the model still makes all semantic choices.
-        response = self._call_ollama(user_prompt)
+        response = self._call_llm(user_prompt)
         last_error: Exception | None = None
         decision_data: dict[str, Any] | None = None
 
@@ -111,7 +111,7 @@ class DimensionReasoner:
                         f"Validation error: {exc}. Response preview: {preview}"
                     ) from exc
 
-                response = self._call_ollama(
+                response = self._call_llm(
                     self._build_repair_prompt(
                         original_prompt=user_prompt,
                         validation_error=str(exc),
@@ -178,12 +178,8 @@ class DimensionReasoner:
             + "\nReturn JSON only."
         )
 
-    def _call_ollama(self, user_prompt: str) -> str:
-        """Call local Ollama or Ollama Cloud and return model text.
-
-        Cloud calls use Ollama's OpenAI-compatible endpoint. Local calls keep
-        using /api/chat and its native structured-output schema.
-        """
+    def _call_llm(self, user_prompt: str) -> str:
+        """Call the LLM (Groq, OpenAI-compatible /chat/completions) and return the model text."""
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -196,43 +192,27 @@ class DimensionReasoner:
                 ),
             },
         ]
-        is_cloud = ".ollama.com" in self.base_url or self.base_url.endswith("/v1")
-
-        if is_cloud:
-            if not self.api_key:
-                raise RuntimeError(
-                    "OLLAMA_API_KEY is missing. Set it in the environment "
-                    "before calling Ollama Cloud."
-                )
-            url = f"{self.base_url}/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "model": self.model,
-                "messages": messages,
-                "stream": False,
-                "temperature": 0,
-                "max_tokens": self.num_predict,
-                # JSON mode prevents prose/fences; Python still validates the schema.
-                "response_format": {"type": "json_object"},
-            }
-        else:
-            url = f"{self.base_url}/api/chat"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "model": self.model,
-                "messages": messages,
-                "stream": False,
-                "think": False,
-                "keep_alive": "10m",
-                "options": {
-                    "temperature": 0.0,
-                    "num_predict": self.num_predict,
-                },
-                "format": self._response_schema(),
-            }
+        if not self.api_key:
+            raise RuntimeError(
+                "GROQ_API_KEY is missing. Set it in the environment "
+                "before calling the LLM."
+            )
+        url = f"{self.base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "temperature": 0,
+            "max_tokens": self.num_predict,
+            # JSON mode prevents prose/fences; Python still validates the schema.
+            "response_format": {"type": "json_object"},
+            # gpt-oss models: reasoning tokens count in max_tokens, keep them short
+            **({"reasoning_effort": "low"} if str(self.model).startswith("openai/gpt-oss") else {}),
+        }
 
         try:
             response = requests.post(
@@ -243,17 +223,17 @@ class DimensionReasoner:
             )
         except requests.Timeout as exc:
             raise RuntimeError(
-                f"Ollama {'Cloud' if is_cloud else 'local'} timed out after "
-                f"{self.timeout} seconds while running model '{self.model}'."
+                f"LLM timed out after {self.timeout} seconds "
+                f"while running model '{self.model}'."
             ) from exc
         except requests.RequestException as exc:
             raise RuntimeError(
-                f"Unable to connect to Ollama at {url}: {exc}"
+                f"Unable to connect to the LLM server at {url}: {exc}"
             ) from exc
 
         if response.status_code != 200:
             raise RuntimeError(
-                f"Ollama {'Cloud' if is_cloud else 'local'} returned an error.\n"
+                "LLM returned an error.\n"
                 f"HTTP status: {response.status_code}\n"
                 f"Response: {response.text}"
             )
@@ -261,33 +241,17 @@ class DimensionReasoner:
         try:
             data = response.json()
         except ValueError as exc:
-            raise RuntimeError("Ollama returned an invalid API response.") from exc
+            raise RuntimeError("LLM returned an invalid API response.") from exc
 
-        if is_cloud:
-            choices = data.get("choices")
-            if not isinstance(choices, list) or not choices:
-                raise RuntimeError(
-                    f"Ollama Cloud response has no choices: {data}"
-                )
-            message = choices[0].get("message", {})
-            content = message.get("content") if isinstance(message, dict) else None
-        else:
-            message = data.get("message")
-            if not isinstance(message, dict):
-                raise RuntimeError(
-                    f"Ollama response has no valid message object: {data}"
-                )
-            content = message.get("content")
-            if not isinstance(content, str) or not content.strip():
-                thinking = message.get("thinking", "")
-                raise RuntimeError(
-                    "Ollama returned empty message content. "
-                    f"Thinking content present: {bool(thinking)}."
-                )
+        choices = data.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise RuntimeError(f"LLM response has no choices: {data}")
+        message = choices[0].get("message", {})
+        content = message.get("content") if isinstance(message, dict) else None
 
         if not isinstance(content, str) or not content.strip():
             raise RuntimeError(
-                "Ollama returned empty response content. "
+                "LLM returned empty response content. "
                 f"Response: {data}"
             )
 
@@ -295,7 +259,7 @@ class DimensionReasoner:
 
     @staticmethod
     def _response_schema() -> dict[str, Any]:
-        """JSON schema required from Phi through Ollama."""
+        """JSON schema of the dimension decision (reference; the LLM is asked for a JSON object)."""
         selection_schema = {
             "type": "object",
             "properties": {
@@ -372,7 +336,7 @@ class DimensionReasoner:
         text after removing a complete <think> block.
         """
         if not isinstance(response, str) or not response.strip():
-            raise ValueError("Phi returned an empty response.")
+            raise ValueError("The model returned an empty response.")
 
         cleaned = re.sub(
             r"<think\b[^>]*>.*?</think\s*>",
@@ -420,7 +384,7 @@ class DimensionReasoner:
         """
         Validate contract consistency without choosing dimensions.
 
-        Semantic selection remains Phi's responsibility.
+        Semantic selection remains the model's responsibility.
         """
         expected_fields = {
             "selected_dimensions",

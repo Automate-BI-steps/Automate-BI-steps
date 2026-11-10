@@ -26,6 +26,6 @@ def test_epuise_les_essais():
 
 
 def test_pas_de_nouvel_essai_sans_cle():
-    invoke, calls = _invoker([{"fact_reasoning_error": "OLLAMA_API_KEY is not set. Configure your Ollama Cloud API key."}])
+    invoke, calls = _invoker([{"fact_reasoning_error": "GROQ_API_KEY is not set. Configure your Groq API key."}])
     _, errors = invoke_with_retry(invoke, {}, max_attempts=3)
     assert len(errors) == 1 and len(calls) == 1

@@ -2,11 +2,12 @@
 
 Utilisé par le backend FastAPI (api/app.py) ; utilisable aussi à la main :
 
-    python -m src.orchestrator init    <run_dir> [--context "..."] [--planner rules|llm] [--model M] [--impute]
+    python -m src.orchestrator init    <run_dir> [--context "..."] [--planner auto|rules|llm] [--model M] [--impute]
     python -m src.orchestrator profile <run_dir>
     python -m src.orchestrator clean   <run_dir>            # s'arrête si des valeurs extrêmes attendent l'utilisateur
     python -m src.orchestrator answer  <run_dir> --answers '{"q1": "cap"}'
     python -m src.orchestrator verify  <run_dir>
+    python -m src.orchestrator etl|kpi|dashboard|auditor <run_dir>   # agents 3 à 6, un par appel
     python -m src.orchestrator all     <run_dir> [--outliers keep|cap|empty|advice]
 
 Mémoire : <run_dir>/state.json contient le state LangGraph complet (src/state.py). Chaque étape
@@ -18,6 +19,7 @@ Chaque commande écrit sur la sortie standard une ligne JSON : {"ok": ..., "stat
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import os
 import pickle
@@ -29,11 +31,15 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.agents.auditor.step import run_auditor_step
 from src.agents.cleaning.agent import table_name
 from src.agents.cleaning.node import finish_cleaning, run_profiling, start_cleaning, verify_cleaning, waiting_update
+from src.agents.dashboard.step import OK_STATUSES as DASHBOARD_OK
+from src.agents.dashboard.step import run_dashboard_step
 from src.agents.etl.node import run_etl
 from src.agents.semantic_kpi.node import run_semantic_kpi
 from src.graph import profiling_handoff
+from src.llm_keys import agent_env, llm_enabled
 from src.state import merge_section
 
 ACCUMULATE = {"errors", "timeline"}  # reducers operator.add
@@ -72,6 +78,17 @@ def set_run(state: dict, status: str, agent: str | None) -> None:
     state["run"] = {**state.get("run", {}), "status": status, "current_agent": agent, "updated_at": _now()}
 
 
+def as_agent(n: int):
+    """L'étape tourne avec la clé LLM propre à l'agent n (GROQ_API_KEY_AGENTn, voir src/llm_keys.py)."""
+    def deco(fn):
+        @functools.wraps(fn)
+        def inner(run_dir: Path, args) -> dict:
+            with agent_env(n):
+                return fn(run_dir, args)
+        return inner
+    return deco
+
+
 # --------------------------------------------------------------------------- étapes
 def cmd_init(run_dir: Path, args) -> dict:
     """Prépare les entrées : CSV copiés tels quels, chaque feuille Excel convertie en CSV UTF-8."""
@@ -87,10 +104,12 @@ def cmd_init(run_dir: Path, args) -> dict:
                 converted.append({"from": f"{f.name} / feuille {sheet}", "to": f"{name}.csv"})
         elif f.suffix.lower() == ".csv":
             shutil.copy2(f, src / f.name)
+    # « auto » : le LLM analyse le nettoyage dès que l'Agent 2 a une clé (la sienne ou la clé partagée), sinon les règles
+    planner = ("llm" if llm_enabled(2) else "rules") if args.planner == "auto" else args.planner
     state = {
         "run": {"run_id": run_dir.name, "created_at": _now(), "run_dir": str(run_dir)},
         "input": {"source_dir": str(src), "business_context": args.context or None, "work_dir": str(run_dir),
-                  "planner": args.planner, "model": args.model or None, "impute": bool(args.impute),
+                  "planner": planner, "model": args.model or None, "impute": bool(args.impute),
                   "uploads": sorted(p.name for p in uploads.iterdir()), "converted_sheets": converted},
         "errors": [],
         "timeline": [{"at": _now(), "agent": "orchestrator", "event": "created",
@@ -102,6 +121,7 @@ def cmd_init(run_dir: Path, args) -> dict:
     return {"ok": True, "status": "created"}
 
 
+@as_agent(1)
 def cmd_profile(run_dir: Path, args) -> dict:
     state = load_state(run_dir)
     set_run(state, "profiling", "profiling")
@@ -115,6 +135,7 @@ def cmd_profile(run_dir: Path, args) -> dict:
     return {"ok": ok, "status": state["run"]["status"]}
 
 
+@as_agent(2)
 def cmd_clean(run_dir: Path, args) -> dict:
     state = load_state(run_dir)
     set_run(state, "cleaning", "cleaning")
@@ -135,6 +156,7 @@ def cmd_clean(run_dir: Path, args) -> dict:
     return {"ok": True, "status": "cleaned"}
 
 
+@as_agent(2)
 def cmd_answer(run_dir: Path, args) -> dict:
     state = load_state(run_dir)
     path = run_dir / SESSION_FILE
@@ -154,6 +176,7 @@ def cmd_answer(run_dir: Path, args) -> dict:
     return {"ok": True, "status": "cleaned"}
 
 
+@as_agent(1)
 def cmd_verify(run_dir: Path, args) -> dict:
     state = load_state(run_dir)
     set_run(state, "verifying", "verification")
@@ -164,6 +187,7 @@ def cmd_verify(run_dir: Path, args) -> dict:
     return {"ok": True, "status": "verified"}
 
 
+@as_agent(3)
 def cmd_etl(run_dir: Path, args) -> dict:
     """Agent 3 : schéma en étoile à partir des tables nettoyées (code non modifié, voir src/agents/etl/)."""
     state = load_state(run_dir)
@@ -176,6 +200,7 @@ def cmd_etl(run_dir: Path, args) -> dict:
     return {"ok": ok, "status": state["run"]["status"]}
 
 
+@as_agent(4)
 def cmd_kpi(run_dir: Path, args) -> dict:
     """Agent 4 : calcul des KPI (code non modifié, voir src/agents/semantic_kpi/)."""
     state = load_state(run_dir)
@@ -183,7 +208,35 @@ def cmd_kpi(run_dir: Path, args) -> dict:
     save_state(run_dir, state)
     apply_update(state, run_semantic_kpi(state))
     ok = state.get("kpi", {}).get("status") == "done"
-    set_run(state, "done" if ok else "error", None if ok else "semantic_kpi")
+    set_run(state, "kpi_done" if ok else "error", None if ok else "semantic_kpi")
+    save_state(run_dir, state)
+    return {"ok": ok, "status": state["run"]["status"]}
+
+
+@as_agent(5)
+def cmd_dashboard(run_dir: Path, args) -> dict:
+    """Agent 5 : tableau de bord (projet Power BI + HTML) à partir de la table à plat et du catalogue de l'Agent 4.
+    Code de Hashem non modifié, voir src/agents/dashboard/."""
+    state = load_state(run_dir)
+    set_run(state, "dashboard", "dashboard")
+    save_state(run_dir, state)
+    apply_update(state, run_dashboard_step(state))
+    ok = state.get("dashboard", {}).get("status") in DASHBOARD_OK
+    set_run(state, "dashboard_done" if ok else "error", None if ok else "dashboard")
+    save_state(run_dir, state)
+    return {"ok": ok, "status": state["run"]["status"]}
+
+
+@as_agent(6)
+def cmd_auditor(run_dir: Path, args) -> dict:
+    """Agent 6 : audit et explications (XAI) de toute la chaîne. Dernière étape : le run est terminé si elle réussit.
+    Code de Dhouha, voir src/agents/auditor/."""
+    state = load_state(run_dir)
+    set_run(state, "auditor", "auditor")
+    save_state(run_dir, state)
+    apply_update(state, run_auditor_step(state))
+    ok = state.get("auditor", {}).get("status") in ("OK", "WARN")
+    set_run(state, "done" if ok else "error", None if ok else "auditor")
     save_state(run_dir, state)
     return {"ok": ok, "status": state["run"]["status"]}
 
@@ -202,13 +255,16 @@ def cmd_all(run_dir: Path, args) -> dict:
     if not res["ok"]:
         return res
     # etl et kpi ne dépendent pas l'un de l'autre (tous les deux lisent les tables nettoyées,
-    # voir src/graph.py) : un échec de l'un ne doit pas empêcher l'autre de tourner.
+    # voir src/graph.py) : un échec de l'un ne doit pas empêcher l'autre de tourner. Le dashboard
+    # a besoin du KPI, l'auditor audite ce qui existe : ils tournent même si une étape a échoué.
     cmd_etl(run_dir, args)
-    return cmd_kpi(run_dir, args)
+    cmd_kpi(run_dir, args)
+    cmd_dashboard(run_dir, args)
+    return cmd_auditor(run_dir, args)
 
 
 COMMANDS = {"init": cmd_init, "profile": cmd_profile, "clean": cmd_clean, "answer": cmd_answer,
-            "verify": cmd_verify, "etl": cmd_etl, "kpi": cmd_kpi, "all": cmd_all}
+            "verify": cmd_verify, "etl": cmd_etl, "kpi": cmd_kpi, "dashboard": cmd_dashboard, "auditor": cmd_auditor, "all": cmd_all}
 
 
 def main() -> None:
@@ -217,7 +273,7 @@ def main() -> None:
     p.add_argument("command", choices=COMMANDS)
     p.add_argument("run_dir", type=Path)
     p.add_argument("--context", default="")
-    p.add_argument("--planner", choices=["rules", "llm"], default="rules")
+    p.add_argument("--planner", choices=["rules", "llm", "auto"], default="auto")
     p.add_argument("--model", default="")
     p.add_argument("--impute", action="store_true")
     p.add_argument("--answers", default="")

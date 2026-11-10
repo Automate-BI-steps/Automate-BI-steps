@@ -178,10 +178,10 @@ PROMPT = ("Tu es analyste BI pour des données de commerce. Voici des constats D
 
 def analyser_llm(res: dict, constats: list, llm=None):
     """Retourne (constats enrichis, résumé ou None, nombre de phrases rejetées).
-    `llm` : un modèle LangChain (par défaut llama3.1 via Ollama) ; peut être remplacé pour les tests."""
+    `llm` : un modèle LangChain (par défaut Groq avec la clé de l'Agent 4, voir llm_client.py) ; remplaçable pour les tests."""
     if llm is None:
-        from langchain_ollama import ChatOllama          # importé ici : le LLM est optionnel
-        llm = ChatOllama(model="llama3.1", temperature=0)
+        from llm_client import make_llm
+        llm = make_llm()
     entree = [{"id": f"c{i}", "kpi": c["nom"], "constat": c["constat"], "niveau": c["niveau"]}
               for i, c in enumerate(constats)]
     sortie = llm.with_structured_output(AnalyseLLM).invoke(

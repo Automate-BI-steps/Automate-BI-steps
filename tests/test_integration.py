@@ -47,7 +47,7 @@ def test_run_complet_garde_la_memoire(tmp_path, monkeypatch):
     assert state["cleaning"]["questions"] and (run / "cleaning_session.pkl").exists()
     qid = state["cleaning"]["questions"][0]["id"]
     assert step("answer", "--answers", json.dumps({qid: "keep"}))["status"] == "cleaned"
-    assert step("verify")["status"] == "done"
+    assert step("verify")["status"] == "verified"            # la suite (ETL, KPI, dashboard, audit) reprend à partir de là
     state = json.loads((run / "state.json").read_text(encoding="utf-8"))
     assert [t["agent"] for t in state["timeline"]] == ["orchestrator", "profiling", "cleaning", "user", "cleaning", "verification"]
     assert state["cleaning"]["profiling_run_id"] == state["profiling"]["metadata"]["run_id"]
@@ -55,7 +55,7 @@ def test_run_complet_garde_la_memoire(tmp_path, monkeypatch):
 
     client = TestClient(app_module.app)
     got = client.get(f"/api/runs/{run.name}").json()
-    assert got["state"]["run"]["status"] == "done"
+    assert got["state"]["run"]["status"] == "verified"
     assert client.get(f"/api/runs/{run.name}/view").status_code == 200
     assert client.get(f"/api/runs/{run.name}/download").headers["content-type"] == "application/zip"
     assert client.get("/api/runs/..%2f..%2fetc").status_code in (404, 422)

@@ -172,10 +172,10 @@ def dimension_reasoning_node(state: dict) -> dict:
 
     try:
         reasoner = DimensionReasoner(
-            model=state.get("reasoning_model", "phi4-mini-reasoning"),
+            model=state.get("reasoning_model", "openai/gpt-oss-120b"),
             base_url=state.get(
-                "ollama_base_url",
-                "http://localhost:11434",
+                "llm_base_url",
+                "https://api.groq.com/openai/v1",
             ),
             timeout=state.get("reasoning_timeout", 300),
         )

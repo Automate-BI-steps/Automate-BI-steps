@@ -2,8 +2,9 @@
 
     etl --(state.cleaning.clean_data_dir)--> semantic_kpi
 
-Le code de l'agent (agent.py, data.py, kpis.py, mapping.py, analysis.py) n'est pas modifié :
-il est lancé tel quel dans un sous-processus isolé (voir runner.py).
+Le principe du code de l'agent (agent.py, data.py, kpis.py, mapping.py, analysis.py) n'est pas modifié :
+il est lancé dans un sous-processus isolé (voir runner.py). Seul le client du LLM change : llm_client.py (Groq avec la
+clé de l'Agent 4 ; le LLM propose, le code vérifie, comme avant).
 
 Note d'intégration (écart de contrat entre agent 3 et agent 4) : le code de l'Agent 4 prévoit,
 dans son propre `charger_donnees`, de recevoir une `fact_trade` déjà construite par l'agent ETL
@@ -48,10 +49,25 @@ def _data_path(state: dict) -> str:
     return state.get("input", {}).get("source_dir") or str(ROOT / "data")
 
 
+def _use_llm() -> bool:
+    """LLM pour le mapping et les constats : automatique dès que l'Agent 4 a une clé (voir src/llm_keys.py).
+    KPI_USE_LLM=1 force, KPI_USE_LLM=0 coupe."""
+    from src.llm_keys import llm_allowed, llm_enabled
+
+    forced = os.environ.get("KPI_USE_LLM", "").strip().lower()
+    if forced in ("0", "false", "non"):
+        return False
+    if forced in ("1", "true", "oui"):
+        return llm_allowed()
+    return llm_enabled(4)
+
+
 def run_semantic_kpi(state: dict, timeout: int = DEFAULT_TIMEOUT) -> dict:
     data_path = _data_path(state)
     out_dir = _work_dir(state) / "semantic_kpi"
     cmd = RUNNER + ["--data-path", data_path, "--output-dir", str(out_dir)]
+    if _use_llm():
+        cmd.append("--use-llm")
 
     env = os.environ.copy()
     proc = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=timeout)
@@ -79,6 +95,7 @@ def run_semantic_kpi(state: dict, timeout: int = DEFAULT_TIMEOUT) -> dict:
             "kpi_analysis": payload.get("kpi_analysis"),
             "kpi_summary": payload.get("kpi_summary"),
             "outputs": payload.get("outputs"),
+            "fact_table_path": payload.get("fact_table"),  # table à plat des KPI (lue par Dashboard et Auditor)
             "output_dir": str(out_dir),
             "errors": errors,
         },

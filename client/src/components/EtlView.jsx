@@ -13,7 +13,9 @@ export default function EtlView({ etl }) {
 
   if (etl.status === "error" && !tables.length) {
     const err = etl.fact_reasoning_error || etl.dimension_selection_error || "";
-    const keyMissing = err.includes("OLLAMA_API_KEY");
+    const keyMissing = err.includes("GROQ_API_KEY");
+    const noCredit = err.includes("HTTP status: 402");
+    const rateLimit = err.includes("HTTP status: 429");
     const badScore = err.includes("does not match the required formula");
     const n = etl.fact_reasoning_attempts;
     return (
@@ -22,9 +24,15 @@ export default function EtlView({ etl }) {
         <p className="error">Aucun schéma produit. {err || "Voir le détail ci-dessous."}</p>
         {keyMissing && (
           <p className="note">
-            Le raisonnement sur la table de faits a besoin d'une clé Ollama Cloud (OLLAMA_API_KEY) :
+            Le raisonnement sur la table de faits a besoin d'une clé LLM (GROQ_API_KEY_AGENT3 ou GROQ_API_KEY dans .env) :
             sans elle, l'agent ne produit pas de schéma (comportement du code de l'agent, pas une panne).
           </p>
+        )}
+        {noCredit && (
+          <p className="note">Le compte du fournisseur LLM n'a plus de crédits (erreur 402) : rechargez-le ou changez de clé.</p>
+        )}
+        {rateLimit && (
+          <p className="note">Quota du fournisseur LLM atteint (erreur 429) : attendez un peu ou utilisez une clé d'un autre compte.</p>
         )}
         {badScore && (
           <p className="note">
@@ -46,8 +54,8 @@ export default function EtlView({ etl }) {
             Source : {etl.input_dir} · table de faits confirmée : <b>{etl.confirmed_fact || "—"}</b>
           </div>
         </div>
-        <span className={"badge " + (etl.ollama_reasoning_used ? "b-ok" : "b-warn")}>
-          {etl.ollama_reasoning_used ? "Raisonnement LLM (Ollama)" : "Repli déterministe (pas de clé Ollama)"}
+        <span className={"badge " + (etl.llm_reasoning_used ? "b-ok" : "b-warn")}>
+          {etl.llm_reasoning_used ? "Raisonnement LLM" : "Repli déterministe (LLM indisponible)"}
         </span>
       </div>
 

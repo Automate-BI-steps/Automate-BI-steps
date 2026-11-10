@@ -86,7 +86,7 @@ class ETLSection(TypedDict, total=False):
     input_dir: str
     confirmed_fact: str | None
     selected_dimensions: list[str]
-    ollama_reasoning_used: bool  # False : repli déterministe (pas de clé OLLAMA_API_KEY ou réseau indisponible)
+    llm_reasoning_used: bool  # False : le raisonnement LLM (Groq) n'a pas abouti (pas de clé GROQ_API_KEY_AGENT3 ou réseau indisponible)
     fact_reasoning_error: str | None
     fact_reasoning_attempts: int | None  # essais du raisonnement LLM (le wrapper réessaie, pas l'agent)
     dimension_selection_error: str | None

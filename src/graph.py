@@ -1,6 +1,8 @@
 """Graphe global du pipeline BI : chaque agent est un nœud (ou un sous-graphe) branché ici.
 
-    START -> profiling -> profiling_handoff -> cleaning -> verification -> etl -> semantic_kpi -> END
+    START -> profiling -> profiling_handoff -> cleaning -> verification -+-> etl ---------------------------+
+                                                                          |                                  +-> auditor -> END
+                                                                          +-> semantic_kpi -> dashboard ----+
 
 Le state (src/state.py) est la mémoire partagée : l'Agent 2 lit `profiling`
 (rapport JSON + chemins des CSV) et écrit `cleaning` ; `timeline` garde la
@@ -11,13 +13,19 @@ l'utilisateur doit valider les valeurs extrêmes.
 L'Agent 3 (etl) et l'Agent 4 (semantic_kpi) lisent tous les deux `cleaning.clean_data_dir` :
 ils tournent donc en parallèle dans ce graphe (chacun dans son dossier, code non modifié —
 voir src/agents/etl/ et src/agents/semantic_kpi/), pas l'un après l'autre.
+
+L'Agent 5 (dashboard, code de Hashem) lit la table à plat et le catalogue de l'Agent 4 ; l'Agent 6
+(auditor, code de Dhouha) attend le dashboard ET l'ETL pour auditer toute la chaîne : il lit
+profiling, cleaning, etl, kpi et dashboard dans le state, n'écrit que `auditor`.
 """
 
 from datetime import datetime
 
 from langgraph.graph import END, START, StateGraph
 
+from src.agents.auditor.step import auditor_graph_node
 from src.agents.cleaning import cleaning_node, verification_node
+from src.agents.dashboard.step import dashboard_graph_node
 from src.agents.etl.node import etl_node
 from src.agents.profiling import build_profiling_graph
 from src.agents.semantic_kpi.node import semantic_kpi_node
@@ -45,12 +53,15 @@ def build_pipeline():
     graph.add_node("verification", verification_node)
     graph.add_node("etl", etl_node)
     graph.add_node("semantic_kpi", semantic_kpi_node)
+    graph.add_node("dashboard", dashboard_graph_node)
+    graph.add_node("auditor", auditor_graph_node)
     graph.add_edge(START, "profiling")
     graph.add_edge("profiling", "profiling_handoff")
     graph.add_edge("profiling_handoff", "cleaning")
     graph.add_edge("cleaning", "verification")
     graph.add_edge("verification", "etl")
     graph.add_edge("verification", "semantic_kpi")
-    graph.add_edge("etl", END)
-    graph.add_edge("semantic_kpi", END)
+    graph.add_edge("semantic_kpi", "dashboard")
+    graph.add_edge(["etl", "dashboard"], "auditor")
+    graph.add_edge("auditor", END)
     return graph.compile()

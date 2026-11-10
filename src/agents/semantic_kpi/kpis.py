@@ -15,9 +15,12 @@ def standardise(df: pd.DataFrame, m: dict) -> pd.DataFrame:
     """Recopie les colonnes utiles sous des noms standard (value, date, country...)."""
     d = pd.DataFrame(index=df.index)
     d["value"] = pd.to_numeric(df[m["value"]], errors="coerce")
-    for role in ("order_id", "country", "product"):
+    for role in ("order_id", "country", "product", "customer", "category", "employee", "shipper"):
         if m.get(role):
             d[role] = df[m[role]]
+    for role in ("quantity", "unit_price", "discount", "freight"):
+        if m.get(role):
+            d[role] = pd.to_numeric(df[m[role]], errors="coerce")
     for role in ("date", "shipped_date", "required_date"):
         if m.get(role):
             s = df[m[role]]
@@ -81,6 +84,80 @@ def lead_time(d):
 def on_time_rate(d):
     o = d.drop_duplicates("order_id").dropna(subset=["shipped_date", "required_date"])
     return round(float((o["shipped_date"] <= o["required_date"]).mean() * 100), 2) if len(o) else None
+
+
+# ---- clients, volumes, remises, transport (rôles complémentaires) ----
+def customer_count(d):
+    return int(d["customer"].nunique())
+
+
+def product_count(d):
+    return int(d["product"].nunique())
+
+
+def units_sold(d):
+    return round(float(d["quantity"].sum()), 2)
+
+
+def gross_revenue(d):
+    """CA avant remise : prix unitaire x quantité."""
+    return round(float((d["unit_price"] * d["quantity"]).sum()), 2)
+
+
+def discount_amount(d):
+    return round(gross_revenue(d) - total_revenue(d), 2)
+
+
+def discount_rate(d):
+    g = gross_revenue(d)
+    return round(discount_amount(d) / g * 100, 2) if g else None
+
+
+def total_freight(d):
+    """Le fret est un montant PAR COMMANDE répété sur chaque ligne : compté une fois par commande."""
+    return round(float(d.drop_duplicates("order_id")["freight"].sum()), 2)
+
+
+def avg_freight(d):
+    n = order_count(d)
+    return round(total_freight(d) / n, 2) if n else None
+
+
+def freight_ratio(d):
+    ca = total_revenue(d)
+    return round(total_freight(d) / ca * 100, 2) if ca else None
+
+
+def _orders(d):
+    return d.drop_duplicates("order_id")
+
+
+def shipped_orders(d):
+    return int(_orders(d)["shipped_date"].notna().sum())
+
+
+def unshipped_orders(d):
+    return int(_orders(d)["shipped_date"].isna().sum())
+
+
+def late_orders(d):
+    o = _orders(d)
+    return int((o["shipped_date"] > o["required_date"]).sum())
+
+
+def revenue_per_customer(d):
+    n = customer_count(d)
+    return round(total_revenue(d) / n, 2) if n else None
+
+
+def units_per_order(d):
+    n = order_count(d)
+    return round(units_sold(d) / n, 2) if n else None
+
+
+def best_employee(d):
+    g = d.groupby("employee")["value"].sum()
+    return str(g.idxmax()) if len(g) else None
 
 
 def _exports_imports(d):
@@ -150,6 +227,50 @@ CATALOG = [
         "VAR expediees = FILTER(VALUES({order_id}), NOT ISBLANK(CALCULATE(MAX({shipped_date})))) "
         "RETURN DIVIDE(COUNTROWS(FILTER(expediees, CALCULATE(MAX({shipped_date})) <= "
         "CALCULATE(MAX({required_date})))), COUNTROWS(expediees)) * 100", on_time_rate),
+    # ---- clients et volumes ----
+    KPI("customer_count", "Active Customers", "Nombre de clients ayant commandé", ("customer",), "clients",
+        "Nombre de clients différents", "DISTINCTCOUNT({customer})", customer_count),
+    KPI("revenue_per_customer", "Revenue per Customer", "Chiffre d'affaires moyen par client", ("value", "customer"),
+        "valeur", "Chiffre d'affaires / nombre de clients", "DIVIDE([Total Revenue], [Active Customers])", revenue_per_customer),
+    KPI("product_count", "Products Sold", "Nombre de produits différents vendus", ("product",), "produits",
+        "Nombre de produits différents", "DISTINCTCOUNT({product})", product_count),
+    KPI("units_sold", "Units Sold", "Quantité totale vendue", ("quantity",), "unités",
+        "Somme des quantités", "SUM({quantity})", units_sold),
+    KPI("units_per_order", "Units per Order", "Quantité moyenne par commande", ("quantity", "order_id"), "unités",
+        "Quantité totale / nombre de commandes", "DIVIDE([Units Sold], [Order Count])", units_per_order),
+    KPI("top_customers", "Top Customers", "5 premiers clients et leur part du CA", ("value", "customer"),
+        "valeur / %", "Somme par client, du plus grand au plus petit", PART % "customer", top5("customer")),
+    KPI("top_categories", "Top Categories", "5 premières catégories et leur part du CA", ("value", "category"),
+        "valeur / %", "Somme par catégorie, du plus grand au plus petit", PART % "category", top5("category")),
+    KPI("top_employees", "Top Employees", "5 premiers employés et leur part du CA", ("value", "employee"),
+        "valeur / %", "Somme par employé, du plus grand au plus petit", PART % "employee", top5("employee")),
+    KPI("best_employee", "Best Employee", "Employé qui réalise le plus grand chiffre d'affaires", ("value", "employee"),
+        "texte", "Employé dont la somme des montants est la plus grande",
+        "MAXX(TOPN(1, VALUES({employee}), [Total Revenue]), {employee})", best_employee),
+    # ---- finance : remises ----
+    KPI("gross_revenue", "Gross Revenue", "Chiffre d'affaires avant remise", ("unit_price", "quantity", "value"), "valeur",
+        "Somme de (prix unitaire x quantité)", "SUMX({table}, {unit_price} * {quantity})", gross_revenue),
+    KPI("discount_amount", "Discount Amount", "Montant total des remises accordées", ("unit_price", "quantity", "value"),
+        "valeur", "CA avant remise - CA", "[Gross Revenue] - [Total Revenue]", discount_amount),
+    KPI("discount_rate", "Discount Rate", "Part du CA brut cédée en remises", ("unit_price", "quantity", "value"), "%",
+        "Remises / CA avant remise x 100", "DIVIDE([Discount Amount], [Gross Revenue]) * 100", discount_rate),
+    # ---- logistique : transport et livraisons ----
+    KPI("total_freight", "Total Freight", "Frais de port totaux (comptés une fois par commande)", ("freight", "order_id"),
+        "valeur", "Somme du fret de chaque commande", "SUMX(VALUES({order_id}), CALCULATE(MAX({freight})))", total_freight),
+    KPI("avg_freight", "Average Freight per Order", "Frais de port moyens par commande", ("freight", "order_id"), "valeur",
+        "Fret total / nombre de commandes", "DIVIDE([Total Freight], [Order Count])", avg_freight),
+    KPI("freight_ratio", "Freight to Revenue", "Poids du transport dans le chiffre d'affaires", ("freight", "order_id", "value"),
+        "%", "Fret total / CA x 100", "DIVIDE([Total Freight], [Total Revenue]) * 100", freight_ratio),
+    KPI("shipped_orders", "Shipped Orders", "Commandes expédiées", ("shipped_date", "order_id"), "commandes",
+        "Commandes avec une date d'expédition",
+        "COUNTROWS(FILTER(VALUES({order_id}), NOT ISBLANK(CALCULATE(MAX({shipped_date})))))", shipped_orders),
+    KPI("unshipped_orders", "Unshipped Orders", "Commandes pas encore expédiées", ("shipped_date", "order_id"), "commandes",
+        "Commandes sans date d'expédition",
+        "COUNTROWS(FILTER(VALUES({order_id}), ISBLANK(CALCULATE(MAX({shipped_date})))))", unshipped_orders),
+    KPI("late_orders", "Late Orders", "Commandes expédiées après la date exigée", ("shipped_date", "required_date", "order_id"),
+        "commandes", "Commandes dont la date d'expédition dépasse la date exigée",
+        "COUNTROWS(FILTER(VALUES({order_id}), NOT ISBLANK(CALCULATE(MAX({shipped_date}))) && "
+        "CALCULATE(MAX({shipped_date})) > CALCULATE(MAX({required_date}))))", late_orders),
     KPI("total_exports", "Total Exports", "Valeur totale des exportations", ("value", "flow"), "valeur",
         "Somme des montants dont le flux est export", EXP, total_exports),
     KPI("total_imports", "Total Imports", "Valeur totale des importations", ("value", "flow"), "valeur",
@@ -175,6 +296,24 @@ POURQUOI = {
     "total_imports": "Brique du solde commercial : rend le calcul du solde vérifiable (BO3).",
     "trade_balance": "KPI cité dans le rapport : solde des échanges, exports moins imports (BO3).",
     "coverage_ratio": "KPI cité dans le rapport : part des imports financée par les exports (BO3).",
+    "customer_count": "Direction commerciale : taille de la base clients active (BO3).",
+    "revenue_per_customer": "Direction commerciale : valeur moyenne d'un client (BO3).",
+    "product_count": "Direction commerciale : largeur de l'offre réellement vendue (BO3).",
+    "units_sold": "Volume physique vendu, indépendant des prix (BO3).",
+    "units_per_order": "Taille moyenne d'une commande en unités (BO3).",
+    "top_customers": "Direction commerciale : dépendance aux plus gros clients (BO3).",
+    "top_categories": "Direction commerciale : catégories qui portent le chiffre d'affaires (BO3).",
+    "top_employees": "Administration : contribution de chaque vendeur (BO3).",
+    "best_employee": "Administration : vendeur qui réalise le plus de chiffre d'affaires (BO3).",
+    "gross_revenue": "Direction financière : chiffre d'affaires avant remises (BO3).",
+    "discount_amount": "Direction financière : coût des remises accordées (BO3).",
+    "discount_rate": "Direction financière : politique de remise rapportée au chiffre d'affaires (BO3).",
+    "total_freight": "Direction logistique : coût total du transport (BO3).",
+    "avg_freight": "Direction logistique : coût moyen d'expédition d'une commande (BO3).",
+    "freight_ratio": "Direction logistique et financière : poids du transport dans le chiffre d'affaires (BO3).",
+    "shipped_orders": "Direction logistique : commandes livrées (expédiées) (BO3).",
+    "unshipped_orders": "Direction logistique : commandes en attente d'expédition (BO3).",
+    "late_orders": "Direction logistique : commandes expédiées en retard (BO3).",
 }
 for _k in CATALOG:
     _k.pourquoi = POURQUOI[_k.id]

@@ -1,10 +1,13 @@
-// Frise des agents : qui a fini, qui travaille, qui attend (lu dans state.run et state.timeline).
+// Frise des agents (une ligne) : qui a fini, qui travaille, qui attend (lu dans state.run et state.timeline).
+// Un clic sur une étape ouvre son onglet ; la note de l'étape en cours s'affiche sous la frise.
 const STEPS = [
-  { key: "profiling", title: "Agent 1 · Profilage", by: "Chiheb" },
-  { key: "cleaning", title: "Agent 2 · Nettoyage", by: "Bedis" },
-  { key: "verification", title: "Contrôle", by: "second profilage" },
-  { key: "etl", title: "Agent 3 · ETL", by: "schéma en étoile" },
-  { key: "semantic_kpi", title: "Agent 4 · Semantic & KPI", by: "calcul des KPI" },
+  { key: "profiling", tab: "profiling", title: "Profilage", by: "Agent 1" },
+  { key: "cleaning", tab: "cleaning", title: "Nettoyage", by: "Agent 2" },
+  { key: "verification", tab: "bilan", title: "Contrôle", by: "2d profilage" },
+  { key: "etl", tab: "etl", title: "ETL", by: "Agent 3" },
+  { key: "semantic_kpi", tab: "kpi", title: "KPI", by: "Agent 4" },
+  { key: "dashboard", tab: "dashboard", title: "Dashboard", by: "Agent 5" },
+  { key: "auditor", tab: "auditor", title: "Audit", by: "Agent 6" },
 ];
 
 function stepState(step, state) {
@@ -14,36 +17,42 @@ function stepState(step, state) {
   const last = [...(state.timeline || [])].reverse().find((n) => n.agent === step.key);
   if (agent === step.key && status !== "error") return status === "waiting_user" ? "waiting" : "active";
   if (last?.event === "done") return "done";
+  if (last?.event === "error") return "error";
   return "todo";
 }
 
-const LABEL = { done: "terminé", active: "en cours", waiting: "attend votre accord", todo: "à venir", error: "erreur" };
+const LABEL = { done: "terminé", active: "en cours", waiting: "votre accord", todo: "à venir", error: "erreur" };
 
-export default function Pipeline({ state, live }) {
+export default function Pipeline({ state, live, onSelect }) {
   const notes = state.timeline || [];
+  const states = STEPS.map((s) => stepState(s, state));
+  const done = states.filter((s) => s === "done").length;
+  const current = STEPS.find((_, i) => states[i] === "active" || states[i] === "waiting");
+  const note = current && [...notes].reverse().find((n) => n.agent === current.key);
   return (
-    <ol className="pipeline">
-      {STEPS.map((s, i) => {
-        const st = stepState(s, state);
-        const note = [...notes].reverse().find((n) => n.agent === s.key);
-        return (
-          <li key={s.key} className={"p-step " + st}>
-            <div className="p-dot">{st === "done" ? "✓" : st === "error" ? "!" : i + 1}</div>
-            <div className="p-body">
-              <div className="p-title">{s.title} <span className="muted">· {s.by}</span></div>
-              <div className="p-status">
-                {LABEL[st]}{st === "active" && live?.running && <span className="mini-spinner" />}
-              </div>
-              {note && <div className="p-note">{note.summary}</div>}
-            </div>
-            {i < STEPS.length - 1 && (
-              <div className="p-handoff" title="Le state est transmis à l'agent suivant">
-                state.json →
-              </div>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+    <div className="card pipe-card">
+      <ol className="stepper" aria-label={`Avancement : ${done} étape(s) sur ${STEPS.length}`}>
+        {STEPS.map((s, i) => {
+          const st = states[i];
+          const last = [...notes].reverse().find((n) => n.agent === s.key);
+          return (
+            <li key={s.key} className={"st " + st}>
+              <button onClick={() => onSelect?.(s.tab)} title={last?.summary || LABEL[st]}>
+                <span className="st-dot">{st === "done" ? "✓" : st === "error" ? "!" : st === "active" ? <span className="mini-spinner" /> : i + 1}</span>
+                <span className="st-title">{s.title}</span>
+                <span className="st-sub">{s.by} · {LABEL[st]}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="pipe-foot">
+        <div className="progress" aria-hidden="true"><span style={{ width: `${(done / STEPS.length) * 100}%` }} /></div>
+        <span className="small muted">
+          {current ? <><b>{current.title}</b> {live?.running ? "en cours" : ""} : {note?.summary || "…"}</>
+            : done === STEPS.length ? "Toutes les étapes sont terminées." : `${done}/${STEPS.length} étapes terminées.`}
+        </span>
+      </div>
+    </div>
   );
 }

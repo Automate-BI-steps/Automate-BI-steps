@@ -126,6 +126,7 @@ def calculer_kpi(state: State) -> dict:
 def documenter_kpi(state: State) -> dict:
     mapping, table = state["semantic_mapping"], os.getenv("FACT_TABLE", "Fact_Trade")
     colonnes_dax = {role: f"{table}[{col}]" for role, col in mapping.items()}   # ex. Fact_Trade[lineTotal]
+    colonnes_dax["table"] = table                                                  # ex. SUMX(Fact_Trade, ...)
     origine = state.get("lineage") or {}                                          # colonne -> table source
     catalogue, dax = [], {}
     for k in CATALOG:

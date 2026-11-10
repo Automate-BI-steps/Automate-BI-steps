@@ -1,0 +1,8 @@
+# Facultatif : recherche sémantique (RAG) et modèles de langage de l'Auditor.
+# Sans ces paquets l'Auditor fonctionne : recherche lexicale + explications « preuves seules ».
+chromadb>=0.5
+sentence-transformers>=3.0        # modèle d'embeddings all-MiniLM-L6-v2 (téléchargé au premier usage)
+anthropic>=0.40                   # AUDITOR_LLM_PROVIDER=anthropic
+transformers>=4.44                # AUDITOR_LLM_PROVIDER=hf (modèle local)
+torch>=2.3
+accelerate>=0.33

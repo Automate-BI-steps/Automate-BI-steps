@@ -13,7 +13,7 @@ class FactCandidateInput:
         - Business Event Score
         - Measure Score
 
-    Phi uses these scores and the associated evidence to calculate
+    The LLM uses these scores and the associated evidence to calculate
     the final Candidate Score.
     """
 
@@ -38,7 +38,7 @@ class FactDecision:
 
 @dataclass(frozen=True)
 class DimensionSelection:
-    """One physical dimension selected by Phi."""
+    """One physical dimension selected by the LLM."""
 
     table_name: str
     dimension_type: str
@@ -48,7 +48,7 @@ class DimensionSelection:
 
 @dataclass(frozen=True)
 class DimensionCandidateDecision:
-    """Phi's decision about one dimension candidate."""
+    """The LLM's decision about one dimension candidate."""
 
     table_name: str
     decision: str  # selected or rejected
@@ -57,7 +57,7 @@ class DimensionCandidateDecision:
 
 @dataclass(frozen=True)
 class DimensionDecision:
-    """Final dimension decisions produced by Phi."""
+    """Final dimension decisions produced by the LLM."""
 
     selected_dimensions: List[DimensionSelection]
     candidate_decisions: List[DimensionCandidateDecision]

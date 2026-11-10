@@ -6,6 +6,7 @@ const AGENT = {
   orchestrator: ["Orchestrateur", "a-orch"], profiling: ["Agent 1 · Profilage", "a-prof"],
   cleaning: ["Agent 2 · Nettoyage", "a-clean"], user: ["Vous", "a-user"], verification: ["Contrôle", "a-verif"],
   etl: ["Agent 3 · ETL", "a-etl"], semantic_kpi: ["Agent 4 · Semantic & KPI", "a-kpi"],
+  dashboard: ["Agent 5 · Dashboard", "a-dash"], auditor: ["Agent 6 · Auditor XAI", "a-aud"],
 };
 
 // Qui écrit et qui lit chaque section du state (src/state.py).
@@ -15,7 +16,9 @@ const SECTIONS = [
   ["profiling", "Agent 1", "Agent 2, interface", "rapport JSON : tables, colonnes, relations, problèmes, score"],
   ["cleaning", "Agent 2", "Agents suivants", "tables nettoyées, journal, questions, bilan"],
   ["etl", "Agent 3", "Interface", "schéma en étoile matérialisé (faits + dimensions)"],
-  ["kpi", "Agent 4", "Interface", "KPI calculés, mapping des colonnes, contrôles, analyse"],
+  ["kpi", "Agent 4", "Agents 5 et 6, interface", "KPI calculés, mapping des colonnes, contrôles, analyse, table à plat"],
+  ["dashboard", "Agent 5", "Agent 6, interface", "projet Power BI + aperçu HTML, KPI transmis ou écartés, avertissements"],
+  ["auditor", "Agent 6", "Interface", "recalcul des chiffres, explications vérifiées, file de validation humaine, limites"],
   ["timeline", "Tous", "Tous", "notes de passage de relais d'un agent à l'autre"],
   ["errors", "Tous", "Orchestrateur", "erreurs d'exécution"],
 ];
